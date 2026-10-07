@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Huellitas.API/Huellitas.API.csproj" />
+    <Project Path="src/Huellitas.Application/Huellitas.Application.csproj" />
+    <Project Path="src/Huellitas.Infrastructure/Huellitas.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Huellitas.IntegrationTests/Huellitas.IntegrationTests.csproj" />
+    <Project Path="tests/Huellitas.UnitTests/Huellitas.UnitTests.csproj" />
+  </Folder>
+</Solution>
