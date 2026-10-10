@@ -12,6 +12,7 @@ public partial class HuellitasDbContext : DbContext
     {
     }
 
+
     public virtual DbSet<Adopciones> Adopciones { get; set; }
 
     public virtual DbSet<Apadrinamientos> Apadrinamientos { get; set; }
@@ -82,6 +83,9 @@ public partial class HuellitasDbContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        //Gestion de mapeo de entidades a tablas y relaciones, aplicando configuraciones desde la respetiva clase de configuracion
+        modelBuilder.ApplyConfigurationsFromAssembly(typeof(HuellitasDbContext).Assembly);
+
         modelBuilder.Entity<Adopciones>(entity =>
         {
             entity.HasKey(e => e.AdopcionId);
