@@ -10,7 +10,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
-        // Registrar AutoMapper, FluentValidation y los Services.
+        // Registrar los Services.
         var assembly = Assembly.GetExecutingAssembly();
         services.AddValidatorsFromAssembly(assembly);
         services.AddScoped<IAutenticacionService, AutenticacionService>();

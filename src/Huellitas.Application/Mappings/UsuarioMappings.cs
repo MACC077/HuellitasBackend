@@ -18,9 +18,12 @@ public static class UsuarioMappings
         {
             Nombre = dto.Nombre,
             Correo = dto.Correo,
-            Telefono = dto.Telefono
-            // ContrasenaHash, Estado, RolId, FechaRegistro,
-            // Activo, FechaCreacion → los asigna el UsuarioService.
+            Telefono = dto.Telefono,
+            FechaRegistro = DateTime.Now,
+            Activo = true,
+            FechaCreacion = DateTime.Now,
+            IntentosFallidos = 0
+            // ContrasenaHash, Estado, RolId los asigna el UsuarioService. Ya que vienen de la lógica de negocio y no del DTO.
         };
     }
 }

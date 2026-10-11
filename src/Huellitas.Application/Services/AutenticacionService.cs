@@ -37,10 +37,7 @@ public class AutenticacionService : IAutenticacionService
         usuario.ContrasenaHash = _hash.Hashear(dto.Contrasena);
         usuario.Estado = (byte)EstadoUsuario.PendienteVerificacion;
         usuario.RolId = await _repo.ObtenerRolIdPorNombreAsync("Adoptante");
-        usuario.FechaRegistro = DateTime.Now;
-        usuario.Activo = true;
-        usuario.FechaCreacion = DateTime.Now;
-        usuario.IntentosFallidos = 0;
+
 
         if (usuario.RolId == 0)
             throw AppException.BadRequest("Configuración del sistema incompleta: no existe el rol Adoptante.");
@@ -55,7 +52,7 @@ public class AutenticacionService : IAutenticacionService
         {
             UsuarioId = usuario.UsuarioId,
             PoliticaId = politicaId,
-            VersionAceptada = "1.0",
+            VersionAceptada = "1.0", //No debe estar quemado debe acualizarse, con lo que trae la BD, pero por ahora lo dejamos así
             FechaAceptacion = DateTime.Now,
             Activo = true
         });
