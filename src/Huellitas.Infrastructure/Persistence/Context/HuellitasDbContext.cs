@@ -75,7 +75,7 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<Temperamentos> Temperamentos { get; set; }
 
-    public virtual DbSet<TokensSeguridad> TokensSeguridads { get; set; }
+    public virtual DbSet<TokensSeguridad> TokensSeguridad { get; set; }
 
     public virtual DbSet<Usuarios> Usuarios { get; set; }
 
@@ -586,7 +586,7 @@ public partial class HuellitasDbContext : DbContext
             entity.Property(e => e.FechaExpiracion).HasPrecision(0);
             entity.Property(e => e.Valor).HasMaxLength(255);
 
-            entity.HasOne(d => d.Usuario).WithMany(p => p.TokensSeguridads)
+            entity.HasOne(d => d.Usuario).WithMany(p => p.TokensSeguridad)
                 .HasForeignKey(d => d.UsuarioId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Tokens_Usuarios");

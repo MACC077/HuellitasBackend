@@ -1,6 +1,6 @@
 ﻿using Huellitas.Infrastructure.Persistence.Entities;
 
-namespace Huellitas.Application.Interfaces.Repositories;
+namespace Huellitas.Infrastructure.Interfaces.Repositories;
 
 public interface IUsuarioRepository
 {
@@ -9,4 +9,8 @@ public interface IUsuarioRepository
     Task<Usuarios?> ObtenerPorCorreoAsync(string correo);
     Task<Usuarios?> ObtenerPorIdAsync(int id);
     Task ActualizarAsync(Usuarios usuario);
+    Task<int> ObtenerRolIdPorNombreAsync(string nombreRol);
+    Task<int> ObtenerPoliticaActivaIdAsync();
+    Task InsertarTokenAsync(TokensSeguridad token);
+    Task InsertarConsentimientoAsync(ConsentimientosDatos consentimiento);
 }

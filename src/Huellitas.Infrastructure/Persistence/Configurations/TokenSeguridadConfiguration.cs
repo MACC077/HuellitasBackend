@@ -5,12 +5,15 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Huellitas.Infrastructure.Persistence.Configurations;
 
-public class TokenSeguridadConfiguration : IEntityTypeConfiguration<TokensSeguridad>
+public class TokensSeguridadConfiguration : IEntityTypeConfiguration<TokensSeguridad>
 {
     public void Configure(EntityTypeBuilder<TokensSeguridad> builder)
     {
+        builder.HasKey(t => t.TokenId);
+
         builder.Property(t => t.Tipo)
             .HasConversion<byte>()
+            .HasMaxLength(500)
             .IsRequired();
     }
 }

@@ -61,5 +61,5 @@ public partial class Usuarios
 
     public virtual ICollection<SolicitudesAdopcion> SolicitudesAdopcions { get; set; } = new List<SolicitudesAdopcion>();
 
-    public virtual ICollection<TokensSeguridad> TokensSeguridads { get; set; } = new List<TokensSeguridad>();
+    public virtual ICollection<TokensSeguridad> TokensSeguridad { get; set; } = new List<TokensSeguridad>();
 }

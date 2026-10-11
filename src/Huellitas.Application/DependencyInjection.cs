@@ -1,4 +1,6 @@
 ﻿using FluentValidation;
+using Huellitas.Application.Interfaces.Services;
+using Huellitas.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -9,9 +11,9 @@ public static class DependencyInjection
     public static IServiceCollection AddApplication(this IServiceCollection services)
     {
         // Registrar AutoMapper, FluentValidation y los Services.
-        // Por ahora queda vacío.
         var assembly = Assembly.GetExecutingAssembly();
         services.AddValidatorsFromAssembly(assembly);
+        services.AddScoped<IAutenticacionService, AutenticacionService>();
         return services;
     }
 }

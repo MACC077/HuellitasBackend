@@ -1,4 +1,4 @@
-﻿namespace Huellitas.Application.Interfaces.Services;
+﻿namespace Huellitas.Infrastructure.Interfaces.Services;
 
 /// <summary>
 /// Abstracción del hashing de contraseñas (RNF-02).

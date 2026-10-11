@@ -9,6 +9,8 @@ public class UsuarioConfiguration : IEntityTypeConfiguration<Usuarios>
 {
     public void Configure(EntityTypeBuilder<Usuarios> builder)
     {
+        builder.HasKey(u => u.UsuarioId);
+
         builder.Property(u => u.Estado)
             .HasConversion<byte>()
             .IsRequired();
