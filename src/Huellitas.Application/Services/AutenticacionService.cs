@@ -149,7 +149,7 @@ public class AutenticacionService : IAutenticacionService
 
     public async Task<TokenResponseDTO> LoginAsync(LoginDTO dto)
     {
-        // 1. Buscar usuario
+        //Buscar usuario
         var usuario = await _repo.ObtenerPorCorreoAsync(dto.Correo);
         if (usuario == null)
             throw AppException.Unauthorized("Credenciales inválidas.");
@@ -164,15 +164,16 @@ public class AutenticacionService : IAutenticacionService
         // 3. Verificar contraseña
         if (!_hash.Verificar(dto.Contrasena, usuario.ContrasenaHash))
         {
-            await _repo.IncrementarIntentosFallidosAsync(usuario.UsuarioId);
+            usuario.IntentosFallidos = (byte)(usuario.IntentosFallidos + 1);
 
-            if (usuario.IntentosFallidos + 1 >= MAX_INTENTOS)
+            if (usuario.IntentosFallidos >= MAX_INTENTOS)
             {
-                await _repo.BloquearUsuarioAsync(usuario.UsuarioId, DateTime.Now.AddMinutes(MINUTOS_BLOQUEO));
-                
-                throw AppException.Forbidden($"Cuenta bloqueada por {MINUTOS_BLOQUEO} minutos por múltiples intentos fallidos.");
+                usuario.FechaBloqueo = DateTime.Now.AddMinutes(MINUTOS_BLOQUEO);
+                await _repo.ActualizarAsync(usuario);   // UPDATE
+                throw AppException.Forbidden($"Cuenta bloqueada por {MINUTOS_BLOQUEO} minutos.");
             }
 
+            await _repo.ActualizarAsync(usuario);
             throw AppException.Unauthorized("Credenciales inválidas.");
         }
 
@@ -183,11 +184,16 @@ public class AutenticacionService : IAutenticacionService
         if (usuario.Estado != (byte)EstadoUsuario.Activo)
             throw AppException.Forbidden("La cuenta no está activa. Contacta al administrador.");
 
-        // 5. Resetear intentos fallidos
-        await _repo.ResetearIntentosFallidosAsync(usuario.UsuarioId);
+        // 5. Resetear intentos (solo si hay algo que resetear)
+        if (usuario.IntentosFallidos > 0 || usuario.FechaBloqueo.HasValue)
+        {
+            usuario.IntentosFallidos = 0;
+            usuario.FechaBloqueo = null;
+            await _repo.ActualizarAsync(usuario);  // UPDATE (solo si aplica)
+        }
 
         // 6. Obtener nombre del rol
-        var nombreRol = await _repo.ObtenerNombreRolAsync(usuario.RolId) ?? "Adoptante";
+        var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
 
         // 7. Generar tokens
         var accessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
@@ -261,7 +267,7 @@ public class AutenticacionService : IAutenticacionService
         });
 
         // 7. Generar nuevo access token
-        var nombreRol = await _repo.ObtenerNombreRolAsync(usuario.RolId) ?? "Adoptante";
+        var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
         var nuevoAccessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
 
         return new TokenResponseDTO

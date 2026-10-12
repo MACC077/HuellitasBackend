@@ -17,8 +17,4 @@ public interface IUsuarioRepository
     Task<TokensSeguridad?> ObtenerTokenPorValorAsync(string valor);
     Task ActualizarTokenAsync(TokensSeguridad token);
     Task<TokensSeguridad?> ObtenerTokenActivoPorUsuarioAsync(int usuarioId, TipoToken tipo);
-    Task<string?> ObtenerNombreRolAsync(int rolId);
-    Task IncrementarIntentosFallidosAsync(int usuarioId);
-    Task ResetearIntentosFallidosAsync(int usuarioId);
-    Task BloquearUsuarioAsync(int usuarioId, DateTime fechaBloqueo);
 }
