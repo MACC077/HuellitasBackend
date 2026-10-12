@@ -91,4 +91,41 @@ public class UsuarioRepository : IUsuarioRepository
             .FirstOrDefaultAsync();
         return token;
     }
+
+    public async Task<string?> ObtenerNombreRolAsync(int rolId)
+    {
+        var rol = await _context.Roles.FirstOrDefaultAsync(r => r.RolId == rolId);
+        return rol?.Nombre;
+    }
+
+    public async Task IncrementarIntentosFallidosAsync(int usuarioId)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioId);
+        if (usuario != null)
+        {
+            usuario.IntentosFallidos = (byte)(usuario.IntentosFallidos + 1);
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task ResetearIntentosFallidosAsync(int usuarioId)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioId);
+        if (usuario != null)
+        {
+            usuario.IntentosFallidos = 0;
+            usuario.FechaBloqueo = null;
+            await _context.SaveChangesAsync();
+        }
+    }
+
+    public async Task BloquearUsuarioAsync(int usuarioId, DateTime fechaBloqueo)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioId);
+        if (usuario != null)
+        {
+            usuario.FechaBloqueo = fechaBloqueo;
+            await _context.SaveChangesAsync();
+        }
+    }
 }

@@ -15,12 +15,13 @@ public static class DependencyInjection
     {
         string cs = config.GetConnectionString("HuellitasDb")!;
         services.AddDbContext<HuellitasDbContext>(opt => opt.UseSqlServer(cs));
-
+        // Repositorios
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
+        // Servicios
         services.AddScoped<IHashContrasena, HashContrasena>();
-        services.AddScoped<IProveedorTokens, ProveedorTokens>();
         services.AddScoped<ICorreoService, CorreoService>();
-        services.AddScoped<ITokenValidador, TokenValidator>();
+        services.AddScoped<ITokenService, TokenService>();
 
         return services;
     }

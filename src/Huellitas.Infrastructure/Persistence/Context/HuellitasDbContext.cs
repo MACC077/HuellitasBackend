@@ -55,6 +55,8 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<Razas> Razas { get; set; }
 
+    public virtual DbSet<RefreshTokens> RefreshTokens { get; set; }
+
     public virtual DbSet<Refugios> Refugios { get; set; }
 
     public virtual DbSet<RegistrosAuditorias> RegistrosAuditoria { get; set; }
