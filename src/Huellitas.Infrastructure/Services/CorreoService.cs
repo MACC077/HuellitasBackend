@@ -22,7 +22,7 @@ public class CorreoService : ICorreoService
         BrevoConfig.Default.ApiKey.Add("api-key", apiKey);
 
         var apiInstance = new TransactionalEmailsApi();
-        var enlace = $"http://localhost:7296/api/v1/Usuarios/confirmar?token={token}";
+        var enlace = $"https://localhost:7296/api/v1/Usuarios/confirmar?token={token}";
 
         var html = $@"
             <h2>¡Hola {nombre}!</h2>

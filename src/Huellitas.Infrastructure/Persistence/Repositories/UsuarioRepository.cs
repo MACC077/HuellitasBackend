@@ -1,4 +1,5 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -24,14 +25,18 @@ public class UsuarioRepository : IUsuarioRepository
     }
 
     public async Task<Usuarios?> ObtenerPorCorreoAsync(string correo)
-        => await _context.Usuarios
-            .Include(u => u.Rol)
-            .FirstOrDefaultAsync(u => u.Correo == correo);
-
+    {
+        return await _context.Usuarios
+        .Include(u => u.Rol)
+        .FirstOrDefaultAsync(u => u.Correo == correo);
+    }
+        
     public async Task<Usuarios?> ObtenerPorIdAsync(int id)
-        => await _context.Usuarios
-            .Include(u => u.Rol)
-            .FirstOrDefaultAsync(u => u.UsuarioId == id);
+    {
+        return await _context.Usuarios
+        .Include(u => u.Rol)
+        .FirstOrDefaultAsync(u => u.UsuarioId == id);
+    }
 
     public async Task ActualizarAsync(Usuarios usuario)
     {
@@ -61,5 +66,29 @@ public class UsuarioRepository : IUsuarioRepository
     {
         _context.ConsentimientosDatos.Add(consentimiento);
         await _context.SaveChangesAsync();
+    }
+
+    public async Task<TokensSeguridad?> ObtenerTokenPorValorAsync(string valor)
+    {
+        return await _context.TokensSeguridad.FirstOrDefaultAsync(t => t.Valor == valor);
+    }
+
+    public async Task ActualizarTokenAsync(TokensSeguridad token)
+    {
+       _context.TokensSeguridad.Update(token);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<TokensSeguridad?> ObtenerTokenActivoPorUsuarioAsync(int usuarioId, TipoToken tipo)
+    {
+        var token =  await _context.TokensSeguridad
+        .Where(t => t.UsuarioId == usuarioId 
+               && t.Tipo == (byte)tipo 
+               && t.Activo 
+               && !t.Usado 
+               && t.FechaExpiracion > DateTime.UtcNow)
+            .OrderByDescending(t => t.FechaCreacion)
+            .FirstOrDefaultAsync();
+        return token;
     }
 }

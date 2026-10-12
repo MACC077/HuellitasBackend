@@ -20,6 +20,7 @@ public static class DependencyInjection
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<IProveedorTokens, ProveedorTokens>();
         services.AddScoped<ICorreoService, CorreoService>();
+        services.AddScoped<ITokenValidador, TokenValidator>();
 
         return services;
     }

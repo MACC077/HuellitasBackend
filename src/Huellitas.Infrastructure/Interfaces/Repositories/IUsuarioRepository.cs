@@ -1,4 +1,5 @@
-﻿using Huellitas.Infrastructure.Persistence.Entities;
+﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Persistence.Entities;
 
 namespace Huellitas.Infrastructure.Interfaces.Repositories;
 
@@ -13,4 +14,7 @@ public interface IUsuarioRepository
     Task<int> ObtenerPoliticaActivaIdAsync();
     Task InsertarTokenAsync(TokensSeguridad token);
     Task InsertarConsentimientoAsync(ConsentimientosDatos consentimiento);
+    Task<TokensSeguridad?> ObtenerTokenPorValorAsync(string valor);
+    Task ActualizarTokenAsync(TokensSeguridad token);
+    Task<TokensSeguridad?> ObtenerTokenActivoPorUsuarioAsync(int usuarioId, TipoToken tipo);
 }

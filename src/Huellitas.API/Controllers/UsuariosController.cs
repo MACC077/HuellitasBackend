@@ -29,4 +29,30 @@ public class UsuariosController : ControllerBase
         // Devuelve 201 Created con la cabecera 'Location' apuntando al recurso creado.
         return CreatedAtAction(nameof(Registrar), new { id = usuarioId }, response);
     }
+
+    /// <summary>
+    /// Confirmar correo usando el token JWT recibido por email.
+    /// </summary>
+    [HttpGet("confirmar", Name = "ConfirmarCorreo")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ConfirmarCorreo([FromQuery] string token)
+    {
+        await _auth.ConfirmarCorreoAsync(token);
+        return Ok(new { mensaje = "Cuenta verificada exitosamente. Ya puedes iniciar sesión." });
+    }
+
+    /// <summary>
+    /// Reenviar correo de verificación.
+    /// </summary>
+    [HttpPost("reenviar-verificacion", Name = "ReenviarCorreoVerificacion")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> ReenviarCorreo([FromBody] ReenviarVerificacionDTO dto)
+    {
+        await _auth.ReenviarCorreoVerificacionAsync(dto.Correo);
+        return Ok(new { mensaje = "Correo de verificación reenviado exitosamente." });
+    }
 }
