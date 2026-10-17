@@ -6,4 +6,5 @@
 public interface ICorreoService
 {
     Task EnviarCorreoVerificacionAsync(string destinatario, string nombre, string token);
+    Task EnviarCorreoRecuperacionAsync(string destinatario, string nombre, string token);
 }

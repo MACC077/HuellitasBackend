@@ -91,6 +91,16 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    //Habilitar CORS para desarrollo
+    app.UseCors(policy => policy
+       .AllowAnyOrigin()
+       .AllowAnyHeader()
+       .AllowAnyMethod());
+}
+else
+{
+    // En producción: solo orígenes permitidos
+    app.UseCors("AllowSpecificOrigins");
 }
 
 app.UseHttpsRedirection();

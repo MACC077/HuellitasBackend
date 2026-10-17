@@ -11,4 +11,6 @@ public interface IAutenticacionService
     Task<TokenResponseDTO> LoginAsync(LoginDTO dto);
     Task<TokenResponseDTO> RefreshTokenAsync(string refreshToken);
     Task LogoutAsync(string refreshToken);
+    Task SolicitarRecuperacionAsync(string correo);
+    Task RestablecerContrasenaAsync(string token, string nuevaContrasena);
 }

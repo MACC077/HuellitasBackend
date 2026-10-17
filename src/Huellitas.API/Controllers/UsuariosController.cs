@@ -55,4 +55,27 @@ public class UsuariosController : ControllerBase
         await _auth.ReenviarCorreoVerificacionAsync(dto.Correo);
         return Ok(new { mensaje = "Correo de verificación reenviado exitosamente." });
     }
+
+    /// <summary>
+    /// Solicitar recuperación de contraseña.
+    /// </summary>
+    [HttpPost("recuperar", Name = "SolicitarRecuperacion")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Recuperar([FromBody] SolicitarRecuperacionDTO dto)
+    {
+        await _auth.SolicitarRecuperacionAsync(dto.Correo);
+        return Ok(new { mensaje = "Si el correo está registrado, recibirás un código de recuperación." });
+    }
+
+    /// <summary>
+    /// Restablecer contraseña con token.
+    /// </summary>
+    [HttpPost("restablecer", Name = "RestablecerContrasena")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Restablecer([FromBody] RestablecerContrasenaDTO dto)
+    {
+        await _auth.RestablecerContrasenaAsync(dto.Token, dto.NuevaContrasena);
+        return Ok(new { mensaje = "Contraseña restablecida exitosamente. Ya puedes iniciar sesión." });
+    }
 }

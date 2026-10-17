@@ -90,5 +90,16 @@ public class UsuarioRepository : IUsuarioRepository
             .OrderByDescending(t => t.FechaCreacion)
             .FirstOrDefaultAsync();
         return token;
-    } 
+    }
+
+    public async Task ActualizarContrasenaAsync(int usuarioId, string nuevoHash)
+    {
+        var usuario = await _context.Usuarios.FindAsync(usuarioId);
+        if (usuario != null)
+        {
+            usuario.ContrasenaHash = nuevoHash;
+            usuario.FechaModificacion = DateTime.Now;
+            await _context.SaveChangesAsync();
+        }
+    }
 }

@@ -30,7 +30,6 @@ public class RefreshTokenRepository : IRefreshTokenRepository
         .FirstOrDefaultAsync(r => r.TokenHash == hash);
     }
         
-
     public async Task RevocarTodosDelUsuarioAsync(int usuarioId, string motivo)
     {
         var tokensActivos = await _context.RefreshTokens

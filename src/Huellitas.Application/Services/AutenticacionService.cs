@@ -80,7 +80,6 @@ public class AutenticacionService : IAutenticacionService
         await _correo.EnviarCorreoVerificacionAsync(usuario.Correo, usuario.Nombre, tokenValor);
         return usuario.UsuarioId;
     }
-
     public async Task<bool> ConfirmarCorreoAsync(string token) 
     {
 
@@ -146,7 +145,6 @@ public class AutenticacionService : IAutenticacionService
 
         await _correo.EnviarCorreoVerificacionAsync(usuario.Correo, usuario.Nombre, nuevoToken);
     }
-
     public async Task<TokenResponseDTO> LoginAsync(LoginDTO dto)
     {
         //Buscar usuario
@@ -154,14 +152,14 @@ public class AutenticacionService : IAutenticacionService
         if (usuario == null)
             throw AppException.Unauthorized("Credenciales inválidas.");
 
-        // 2. Verificar bloqueo temporal
+        //Verificar bloqueo temporal
         if (usuario.FechaBloqueo.HasValue && usuario.FechaBloqueo > DateTime.Now)
         {
             var minutosRestantes = (int)(usuario.FechaBloqueo.Value - DateTime.Now).TotalMinutes + 1;
             throw AppException.Forbidden($"Cuenta bloqueada temporalmente. Intenta de nuevo en {minutosRestantes} minuto(s).");
         }
 
-        // 3. Verificar contraseña
+        //Verificar contraseña
         if (!_hash.Verificar(dto.Contrasena, usuario.ContrasenaHash))
         {
             usuario.IntentosFallidos = (byte)(usuario.IntentosFallidos + 1);
@@ -177,14 +175,14 @@ public class AutenticacionService : IAutenticacionService
             throw AppException.Unauthorized("Credenciales inválidas.");
         }
 
-        // 4. Verificar estado activo
+        //Verificar estado activo
         if (usuario.Estado == (byte)EstadoUsuario.PendienteVerificacion)
             throw AppException.Forbidden("Debes confirmar tu correo antes de iniciar sesión.");
 
         if (usuario.Estado != (byte)EstadoUsuario.Activo)
             throw AppException.Forbidden("La cuenta no está activa. Contacta al administrador.");
 
-        // 5. Resetear intentos (solo si hay algo que resetear)
+        //Resetear intentos (solo si hay algo que resetear)
         if (usuario.IntentosFallidos > 0 || usuario.FechaBloqueo.HasValue)
         {
             usuario.IntentosFallidos = 0;
@@ -192,14 +190,14 @@ public class AutenticacionService : IAutenticacionService
             await _repo.ActualizarAsync(usuario);  // UPDATE (solo si aplica)
         }
 
-        // 6. Obtener nombre del rol
+        //Obtener nombre del rol
         var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
 
-        // 7. Generar tokens
+        //Generar tokens
         var accessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
         var refreshToken = _tokenService.GenerarRefreshToken();
 
-        // 8. Guardar refresh token (hasheado)
+        //Guardar refresh token (hasheado)
         var diasRefresh = 7;
         await _refreshRepo.InsertarAsync(new RefreshTokens
         {
@@ -210,7 +208,7 @@ public class AutenticacionService : IAutenticacionService
             Creado = DateTime.Now
         });
 
-        // 9. Retornar
+        //Retornar
         return new TokenResponseDTO
         {
             AccessToken = accessToken,
@@ -220,7 +218,6 @@ public class AutenticacionService : IAutenticacionService
             Rol = nombreRol
         };
     }
-
     public async Task<TokenResponseDTO> RefreshTokenAsync(string refreshToken)
     {
         // 1. Hashear y buscar
@@ -279,7 +276,6 @@ public class AutenticacionService : IAutenticacionService
             Rol = nombreRol
         };
     }
-
     public async Task LogoutAsync(string refreshToken)
     {
         var hash = _tokenService.HashearToken(refreshToken);
@@ -291,5 +287,71 @@ public class AutenticacionService : IAutenticacionService
         tokenDb.RevocadoEn = DateTime.Now;
         tokenDb.ReemplazadoPor = "Logout";
         await _refreshRepo.ActualizarAsync(tokenDb);
+    }
+    public async Task SolicitarRecuperacionAsync(string correo)
+    {
+        var usuario = await _repo.ObtenerPorCorreoAsync(correo);
+        // Seguridad: no revelar si el correo existe
+        if (usuario == null) return; 
+
+        //Invalidar token anterior si existe
+        var tokenAnterior = await _repo.ObtenerTokenActivoPorUsuarioAsync(usuario.UsuarioId, TipoToken.RecuperacionContrasena);
+
+        if (tokenAnterior != null)
+        {
+            tokenAnterior.Usado = true;
+            tokenAnterior.Activo = false;
+            await _repo.ActualizarTokenAsync(tokenAnterior);
+        }
+
+        //Generar nuevo token
+        var tokenValor = _tokenService.GenerarTokenVerificacion(usuario.UsuarioId);
+
+        //Guardar en BD (Expira en 30 minutos)
+        await _repo.InsertarTokenAsync(new TokensSeguridad
+        {
+            UsuarioId = usuario.UsuarioId,
+            Tipo = (byte)TipoToken.RecuperacionContrasena,
+            Valor = tokenValor,
+            FechaExpiracion = DateTime.Now.AddMinutes(30),
+            Usado = false,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        });
+
+        //Enviar correo
+        await _correo.EnviarCorreoRecuperacionAsync(usuario.Correo, usuario.Nombre, tokenValor);
+    }
+
+    public async Task RestablecerContrasenaAsync(string token, string nuevaContrasena)
+    {
+        //Validar JWT
+        if (!_tokenService.ValidarToken(token))
+            throw AppException.BadRequest("Token inválido o expirado.");
+
+        //Buscar token en BD
+        var tokenDb = await _repo.ObtenerTokenPorValorAsync(token);
+        if (tokenDb == null || tokenDb.Usado || tokenDb.FechaExpiracion < DateTime.Now)
+            throw AppException.BadRequest("Token inválido o expirado.");
+
+        if (tokenDb.Tipo != (byte)TipoToken.RecuperacionContrasena)
+            throw AppException.BadRequest("Token inválido.");
+
+        //Buscar usuario
+        var usuario = await _repo.ObtenerPorIdAsync(tokenDb.UsuarioId)
+            ?? throw AppException.NotFound("Usuario no encontrado.");
+
+        //Actualizar contraseña
+        var nuevoHash = _hash.Hashear(nuevaContrasena);
+        await _repo.ActualizarContrasenaAsync(usuario.UsuarioId, nuevoHash);
+
+        //Marcar token como usado
+        tokenDb.Usado = true;
+        tokenDb.Activo = false;
+        await _repo.ActualizarTokenAsync(tokenDb);
+
+        //Seguridad: Revocar todos los refresh tokens activos (fuerza relogin en otros dispositivos)
+        await _refreshRepo.RevocarTodosDelUsuarioAsync(usuario.UsuarioId, "Contraseña restablecida");
+
     }
 }

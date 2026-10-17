@@ -17,4 +17,5 @@ public interface IUsuarioRepository
     Task<TokensSeguridad?> ObtenerTokenPorValorAsync(string valor);
     Task ActualizarTokenAsync(TokensSeguridad token);
     Task<TokensSeguridad?> ObtenerTokenActivoPorUsuarioAsync(int usuarioId, TipoToken tipo);
+    Task ActualizarContrasenaAsync(int usuarioId, string nuevoHash);
 }
