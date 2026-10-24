@@ -1,7 +1,4 @@
 ﻿using Huellitas.Application.DTOs.Usuarios;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Huellitas.Application.Interfaces.Services
 {
@@ -12,5 +9,7 @@ namespace Huellitas.Application.Interfaces.Services
         Task CambiarPasswordAsync(int usuarioId, CambiarPasswordDTO dto);
         Task CambiarCorreoAsync(int usuarioId, CambiarCorreoDTO dto);
         Task DesactivarCuentaAsync(int usuarioId, DesactivarCuentaDTO dto);
+        Task<PerfilAdoptanteDTO> ObtenerPerfilAdoptanteAsync(int usuarioId);
+        Task ActualizarPerfilAdoptanteAsync(int usuarioId, ActualizarPerfilAdoptanteDTO dto);
     }
 }

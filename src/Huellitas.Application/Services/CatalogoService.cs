@@ -40,4 +40,10 @@ public class CatalogoService : ICatalogoService
         var temperamentos = await _repo.ObtenerTemperamentosAsync();
         return temperamentos.ToDtoList();
     }
+
+    public async Task<IEnumerable<TipoViviendaDTO>> ObtenerTiposViviendaAsync()
+    {
+        var tiposVivienda = await _repo.ObtenerTiposViviendaAsync();
+        return tiposVivienda.ToDtoList();
+    }
 }

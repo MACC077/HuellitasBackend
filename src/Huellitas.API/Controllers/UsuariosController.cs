@@ -152,4 +152,29 @@ public class UsuariosController : ControllerBase
         await _usuarioService.DesactivarCuentaAsync(User.GetUserId(), dto);
         return Ok(new { mensaje = "Cuenta desactivada correctamente." });
     }
+
+    /// <summary>
+    /// Obtener el perfil de adoptante del usuario autenticado.
+    /// </summary>
+    [HttpGet("perfil-adoptante", Name = "GetPerfilAdoptante")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPerfilAdoptante()
+    {
+        var result = await _usuarioService.ObtenerPerfilAdoptanteAsync(User.GetUserId());
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Crear o actualizar el perfil de adoptante.
+    /// </summary>
+    [HttpPut("perfil-adoptante", Name = "UpdatePerfilAdoptante")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdatePerfilAdoptante([FromBody] ActualizarPerfilAdoptanteDTO dto)
+    {
+        await _usuarioService.ActualizarPerfilAdoptanteAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Perfil de adoptante actualizado correctamente." });
+    }
 }

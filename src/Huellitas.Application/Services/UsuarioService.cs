@@ -1,6 +1,7 @@
 ﻿using Huellitas.Application.Common.Exceptions;
 using Huellitas.Application.DTOs.Usuarios;
 using Huellitas.Application.Interfaces.Services;
+using Huellitas.Application.Mappings;
 using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Interfaces.Services;
@@ -15,18 +16,21 @@ public class UsuarioService : IUsuarioService
     private readonly ICorreoService _correo;
     private readonly ITokenService _tokenService;
     private readonly IRefreshTokenRepository _refreshRepo;
+    private readonly IPerfilAdoptanteRepository _perfilRepo;
 
     public UsuarioService(IUsuarioRepository repo, 
         IHashContrasena hash, 
         ICorreoService correo,
         ITokenService tokenService, 
-        IRefreshTokenRepository refreshRepo)
+        IRefreshTokenRepository refreshRepo,
+        IPerfilAdoptanteRepository perfilRepo)
     {
         _repo = repo; 
         _hash = hash; 
         _correo = correo; 
         _tokenService = tokenService; 
         _refreshRepo = refreshRepo;
+        _perfilRepo = perfilRepo;
     }
 
     public async Task<UsuarioPerfilDTO> ObtenerPerfilAsync(int usuarioId)
@@ -36,18 +40,7 @@ public class UsuarioService : IUsuarioService
 
         var consentimiento = usuario.ConsentimientosDatos?.OrderByDescending(c => c.FechaAceptacion).FirstOrDefault();
 
-        return new UsuarioPerfilDTO
-        {
-            Id = usuario.UsuarioId,
-            Nombre = usuario.Nombre,
-            Correo = usuario.Correo,
-            Telefono = usuario.Telefono,
-            FotoUrl = usuario.FotoUrl,
-            Estado = usuario.Estado == (byte)EstadoUsuario.Activo ? "Activo" : "Pendiente/Inactivo",
-            FechaRegistro = usuario.FechaRegistro,
-            PoliticaAceptada = consentimiento?.Politica?.Version,
-            FechaAceptacionPolitica = consentimiento?.FechaAceptacion
-        };
+        return usuario.ToPerfilDto();
     }
 
     public async Task ActualizarPerfilAsync(int usuarioId, ActualizarPerfilDTO dto)
@@ -121,5 +114,92 @@ public class UsuarioService : IUsuarioService
         await _repo.ActualizarAsync(usuario);
 
         await _refreshRepo.RevocarTodosDelUsuarioAsync(usuarioId, "Cuenta desactivada");
+    }
+
+    public async Task<PerfilAdoptanteDTO> ObtenerPerfilAdoptanteAsync(int usuarioId)
+    {
+        var perfil = await _perfilRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+
+        if (perfil == null)
+        {
+            return new PerfilAdoptanteDTO { PorcentajeCompletitud = 0 };
+        }
+
+        return new PerfilAdoptanteDTO
+        {
+            TipoVivienda = perfil.TipoVivienda switch
+            {
+                0 => "Casa",
+                1 => "Apartamento",
+                2 => "Finca",
+                _ => null
+            },
+            EspacioDisponible = perfil.EspacioDisponible,
+            PresenciaDeNinos = perfil.PresenciaDeNinos,
+            OtrasMascotas = perfil.OtrasMascotas,
+            TiempoDisponible = perfil.TiempoDisponible,
+            ExperienciaPrevia = perfil.ExperienciaPrevia,
+            PorcentajeCompletitud = CalcularCompletitud(perfil)
+        };
+    }
+
+    /// <summary>
+    /// Crea o actualiza el perfil de adoptante del usuario autenticado (Operación Upsert).
+    /// </summary>
+    /// <remarks>
+    /// Dado que el perfil de adoptante tiene una relación 1 a 1 con el usuario, 
+    /// se implementa un PUT idempotente que actúa como "crear o actualizar". 
+    /// Esto simplifica el consumo desde el frontend, ya que el cliente no necesita 
+    /// consultar previamente si el recurso existe para decidir si hacer un POST o un PUT.
+    /// </remarks>
+    public async Task ActualizarPerfilAdoptanteAsync(int usuarioId, ActualizarPerfilAdoptanteDTO dto)
+    {
+        var perfil = await _perfilRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+
+        if (perfil == null)
+        {
+            // Crear nuevo perfil
+            perfil = new PerfilesAdoptante
+            {
+                UsuarioId = usuarioId,
+                TipoVivienda = (byte?)dto.TipoVivienda,
+                EspacioDisponible = dto.EspacioDisponible,
+                PresenciaDeNinos = dto.PresenciaDeNinos,
+                OtrasMascotas = dto.OtrasMascotas,
+                TiempoDisponible = dto.TiempoDisponible,
+                ExperienciaPrevia = dto.ExperienciaPrevia,
+                Activo = true,
+                FechaCreacion = DateTime.Now
+            };
+            await _perfilRepo.InsertarAsync(perfil);
+        }
+        else
+        {
+            // Actualizar existente
+            perfil.TipoVivienda = (byte?)dto.TipoVivienda;
+            perfil.EspacioDisponible = dto.EspacioDisponible;
+            perfil.PresenciaDeNinos = dto.PresenciaDeNinos;
+            perfil.OtrasMascotas = dto.OtrasMascotas;
+            perfil.TiempoDisponible = dto.TiempoDisponible;
+            perfil.ExperienciaPrevia = dto.ExperienciaPrevia;
+            perfil.FechaModificacion = DateTime.Now;
+
+            await _perfilRepo.ActualizarAsync(perfil);
+        }
+    }
+
+    private int CalcularCompletitud(PerfilesAdoptante p)
+    {
+        int total = 6;
+        int completados = 0;
+
+        if (p.TipoVivienda.HasValue) completados++;
+        if (!string.IsNullOrEmpty(p.EspacioDisponible)) completados++;
+        if (p.PresenciaDeNinos.HasValue) completados++;
+        if (p.OtrasMascotas.HasValue) completados++;
+        if (!string.IsNullOrEmpty(p.TiempoDisponible)) completados++;
+        if (p.ExperienciaPrevia.HasValue) completados++;
+
+        return (int)Math.Round((double)completados / total * 100);
     }
 }

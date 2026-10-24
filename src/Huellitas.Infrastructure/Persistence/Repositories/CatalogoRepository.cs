@@ -35,5 +35,10 @@ public class CatalogoRepository : ICatalogoRepository
     {
         return await _context.Temperamentos.Where(t => t.Activo).OrderBy(t => t.Nombre).ToListAsync();
     }
+
+    public async Task<IEnumerable<TiposVivienda>> ObtenerTiposViviendaAsync()
+    {
+        return await _context.TiposVivienda.Where(t => t.Activo).OrderBy(t => t.Nombre).ToListAsync();
+    }
 }
        

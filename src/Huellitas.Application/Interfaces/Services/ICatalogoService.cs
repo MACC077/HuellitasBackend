@@ -9,4 +9,5 @@ public interface ICatalogoService
     Task<IEnumerable<TamanoDTO>> ObtenerTamanosAsync();
     Task<IEnumerable<ColorDTO>> ObtenerColoresAsync();
     Task<IEnumerable<TemperamentoDTO>> ObtenerTemperamentosAsync();
+    Task<IEnumerable<TipoViviendaDTO>> ObtenerTiposViviendaAsync();
 }

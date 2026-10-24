@@ -78,5 +78,18 @@ namespace Huellitas.Application.Mappings
 
         public static IEnumerable<TemperamentoDTO> ToDtoList(this IEnumerable<Temperamentos> entities)
             => entities.Select(t => t.ToDto()).OrderBy(t => t.Id);
+
+        // 6. Tipos de Vivienda
+        public static TipoViviendaDTO ToDto(this TiposVivienda entity)
+        {
+            return new TipoViviendaDTO
+            {
+                Id = entity.TipoViviendaId,
+                Nombre = entity.Nombre
+            };
+        }
+
+        public static IEnumerable<TipoViviendaDTO> ToDtoList(this IEnumerable<TiposVivienda> entities)
+            => entities.Select(t => t.ToDto()).OrderBy(t => t.Id);
     }
 }

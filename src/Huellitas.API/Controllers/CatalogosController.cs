@@ -53,4 +53,11 @@ public class CatalogosController : ControllerBase
         var result = await _catalogoService.ObtenerTemperamentosAsync();
         return Ok(result);
     }
+
+    [HttpGet("tipos-vivienda", Name = "GetTiposVivienda")]
+    public async Task<IActionResult> GetTiposVivienda()
+    {
+        var result = await _catalogoService.ObtenerTiposViviendaAsync();
+        return Ok(result);
+    }
 }

@@ -83,6 +83,8 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<VisitasEntrevista> VisitasEntrevista { get; set; }
 
+    public virtual DbSet<TiposVivienda> TiposVivienda { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         //Gestion de mapeo de entidades a tablas y relaciones, aplicando configuraciones desde la respetiva clase de configuracion

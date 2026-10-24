@@ -9,4 +9,5 @@ public interface ICatalogoRepository
     Task<IEnumerable<Tamanos>> ObtenerTamanosAsync();
     Task<IEnumerable<Colores>> ObtenerColoresAsync();
     Task<IEnumerable<Temperamentos>> ObtenerTemperamentosAsync();
+    Task<IEnumerable<TiposVivienda>> ObtenerTiposViviendaAsync();
 }
