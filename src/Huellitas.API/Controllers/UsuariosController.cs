@@ -1,6 +1,9 @@
-﻿using Huellitas.Application.DTOs.Usuarios;
+﻿using Huellitas.API.Extensions;
+using Huellitas.Application.DTOs.Usuarios;
 using Huellitas.Application.Interfaces.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Huellitas.API.Controllers;
 
@@ -9,7 +12,12 @@ namespace Huellitas.API.Controllers;
 public class UsuariosController : ControllerBase
 {
     private readonly IAutenticacionService _auth;
-    public UsuariosController(IAutenticacionService auth) => _auth = auth;
+    private readonly IUsuarioService _usuarioService;
+    public UsuariosController(IAutenticacionService auth, IUsuarioService usuarioService)
+    {
+        _auth = auth;
+        _usuarioService = usuarioService;
+    }
 
     /// <summary>
     /// HU-USU-01: Registro de usuario con verificación de correo.
@@ -77,5 +85,71 @@ public class UsuariosController : ControllerBase
     {
         await _auth.RestablecerContrasenaAsync(dto.Token, dto.NuevaContrasena);
         return Ok(new { mensaje = "Contraseña restablecida exitosamente. Ya puedes iniciar sesión." });
+    }
+
+    /// <summary>
+    /// Obtener los datos del perfil del usuario autenticado.
+    /// </summary>
+    [HttpGet("perfil", Name = "GetPerfil")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> GetPerfil()
+    {
+        var result = await _usuarioService.ObtenerPerfilAsync(User.GetUserId());
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Actualizar la información básica del perfil (nombre, teléfono, foto).
+    /// </summary>
+    [HttpPut("perfil", Name = "UpdatePerfil")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> UpdatePerfil([FromBody] ActualizarPerfilDTO dto)
+    {
+        await _usuarioService.ActualizarPerfilAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Perfil actualizado correctamente." });
+    }
+
+    /// <summary>
+    /// Cambiar la contraseña del usuario autenticado (requiere la actual).
+    /// </summary>
+    [HttpPut("cambiar-password", Name = "CambiarPassword")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> CambiarPassword([FromBody] CambiarPasswordDTO dto)
+    {
+        await _usuarioService.CambiarPasswordAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Contraseña actualizada. Por seguridad, inicia sesión de nuevo." });
+    }
+
+    /// <summary>
+    /// Cambiar el correo electrónico (requiere verificación posterior).
+    /// </summary>
+    [HttpPut("cambiar-correo", Name = "CambiarCorreo")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> CambiarCorreo([FromBody] CambiarCorreoDTO dto)
+    {
+        await _usuarioService.CambiarCorreoAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Correo actualizado. Revisa tu nueva bandeja para verificarlo." });
+    }
+
+    /// <summary>
+    /// Desactivar la cuenta (soft delete) del usuario autenticado.
+    /// </summary>
+    [HttpPatch("desactivar", Name = "DesactivarCuenta")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Desactivar([FromBody] DesactivarCuentaDTO dto)
+    {
+        await _usuarioService.DesactivarCuentaAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Cuenta desactivada correctamente." });
     }
 }

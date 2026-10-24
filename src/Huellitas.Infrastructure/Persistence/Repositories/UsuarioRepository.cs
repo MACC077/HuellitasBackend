@@ -102,4 +102,12 @@ public class UsuarioRepository : IUsuarioRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<Usuarios?> ObtenerPerfilCompletoAsync(int usuarioId)
+    {
+        return await _context.Usuarios
+            .Include(u => u.ConsentimientosDatos)
+            .ThenInclude(c => c.Politica)
+            .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+    }
 }
