@@ -20,6 +20,8 @@ public static class DependencyInjection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<ICatalogoRepository, CatalogoRepository>();
         services.AddScoped<IPerfilAdoptanteRepository, PerfilAdoptanteRepository>();
+        services.AddScoped<IRefugioRepository, RefugioRepository>();
+        services.AddScoped<IMascotaRepository, MascotaRepository>();
         // Servicios
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<ICorreoService, CorreoService>();

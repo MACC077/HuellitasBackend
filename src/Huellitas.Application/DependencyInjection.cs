@@ -1,6 +1,8 @@
 ﻿using FluentValidation;
 using Huellitas.Application.Interfaces.Services;
 using Huellitas.Application.Services;
+using Huellitas.Infrastructure.Interfaces.Repositories;
+using Huellitas.Infrastructure.Persistence.Repositories;
 using Microsoft.Extensions.DependencyInjection;
 using System.Reflection;
 
@@ -16,6 +18,8 @@ public static class DependencyInjection
         services.AddScoped<IAutenticacionService, AutenticacionService>();
         services.AddScoped<ICatalogoService, CatalogoService>();
         services.AddScoped<IUsuarioService, UsuarioService>();
+        services.AddScoped<IRefugioRepository, RefugioRepository>();
+        services.AddScoped<IMascotaService, MascotaService>();
         return services;
     }
 }
