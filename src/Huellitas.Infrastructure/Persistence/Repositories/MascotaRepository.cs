@@ -73,4 +73,46 @@ public class MascotaRepository : IMascotaRepository
         _context.Multimedia.RemoveRange(fotos);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<(IEnumerable<Mascotas> Items, int Total)> ObtenerCatalogoPublicoAsync(int pagina, int tamano, int? especieId, int? tamanoId, byte? sexo)
+    {
+        var query = _context.Mascotas
+            .Include(m => m.Especie)
+            .Include(m => m.Raza)
+            .Include(m => m.Multimedia)
+            .Where(m => m.Activo && m.Estado == 0)
+            .AsQueryable();
+
+        // Aplicar filtros
+        if (especieId.HasValue)
+            query = query.Where(m => m.EspecieId == especieId.Value);
+
+        if (tamanoId.HasValue)
+            query = query.Where(m => m.TamanoId == tamanoId.Value);
+
+        if (sexo.HasValue)
+            query = query.Where(m => m.Sexo == sexo.Value);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(m => m.FechaCreacion)
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<Mascotas?> ObtenerDetallePublicoAsync(int mascotaId)
+    {
+        return await _context.Mascotas
+        .Include(m => m.Especie)
+        .Include(m => m.Raza)
+        .Include(m => m.Refugio) // 👈 Traemos los datos del refugio
+        .Include(m => m.Multimedia)
+        .FirstOrDefaultAsync(m => m.MascotaId == mascotaId && m.Activo);
+        // Nota: Permitimos ver el detalle aunque esté "En Proceso", 
+        // para que el adoptante que ya aplicó pueda seguir viéndola.
+    }
 }

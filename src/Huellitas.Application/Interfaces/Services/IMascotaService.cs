@@ -10,4 +10,6 @@ public interface IMascotaService
     Task CambiarEstadoAsync(int mascotaId, CambiarEstadoMascotaDTO dto, int usuarioId);
     Task DarDeBajaAsync(int mascotaId, string motivo, int usuarioId);
     Task<PagedResult<MascotaResumenDTO>> ObtenerMisMascotasAsync(int usuarioId, int pagina, int tamano);
+    Task<PagedResult<MascotaResumenDTO>> ObtenerCatalogoAsync(FiltroMascotaDTO filtro);
+    Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId);
 }

@@ -96,4 +96,35 @@ public class MascotasController : ControllerBase
         var result = await _mascotaService.ObtenerMisMascotasAsync(User.GetUserId(), pagina, tamano);
         return Ok(result);
     }
+
+    /// <summary>
+    /// Obtener el catálogo público de mascotas disponibles con filtros.
+    /// </summary>
+    /// <remarks>
+    /// Este endpoint es de libre acceso. Solo muestra mascotas en estado "Disponible".
+    /// </remarks>
+    [HttpGet(Name = "GetCatalogoMascotas")]
+    [AllowAnonymous] //Ignora el [Authorize] de la clase
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCatalogo([FromQuery] FiltroMascotaDTO filtro)
+    {
+        var result = await _mascotaService.ObtenerCatalogoAsync(filtro);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Obtener el detalle público de una mascota (Ficha).
+    /// </summary>
+    /// <remarks>
+    /// Este endpoint es de libre acceso. Devuelve la info completa con fotos e info del refugio.
+    /// </remarks>
+    [HttpGet("{id}", Name = "GetDetalleMascota")]
+    [AllowAnonymous] //Ignora el [Authorize] de la clase
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetDetalle(int id)
+    {
+        var result = await _mascotaService.ObtenerDetalleAsync(id);
+        return Ok(result);
+    }
 }

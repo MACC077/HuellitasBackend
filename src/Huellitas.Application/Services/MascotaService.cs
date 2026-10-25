@@ -165,4 +165,31 @@ public class MascotaService : IMascotaService
 
         return mascota;
     }
+
+    public async Task<PagedResult<MascotaResumenDTO>> ObtenerCatalogoAsync(FiltroMascotaDTO filtro)
+    {
+        // El servicio extrae los valores del DTO y se los pasa al repo
+        var (items, total) = await _mascotaRepo.ObtenerCatalogoPublicoAsync(
+            filtro.Pagina,
+            filtro.TamanoPagina,
+            filtro.EspecieId,
+            filtro.TamanoId,
+            filtro.Sexo);
+
+        return new PagedResult<MascotaResumenDTO>
+        {
+            Items = items.ToResumenDtoList().ToList(),
+            Pagina = filtro.Pagina,
+            TamanoPagina = filtro.TamanoPagina,
+            TotalRegistros = total
+        };
+    }
+
+    public async Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId)
+    {
+        var mascota = await _mascotaRepo.ObtenerDetallePublicoAsync(mascotaId)
+            ?? throw AppException.NotFound("La mascota no existe o no está disponible.");
+
+        return mascota.ToDetalleDto();
+    }
 }

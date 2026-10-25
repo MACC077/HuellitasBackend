@@ -14,4 +14,6 @@ public interface IMascotaRepository
     Task InsertarBitacoraAsync(Bitacoras bitacora);
     Task InsertarMultimediaAsync(Multimedia multimedia);
     Task EliminarMultimediaAsync(int mascotaId); // Para actualizar fotos
+    Task<(IEnumerable<Mascotas> Items, int Total)> ObtenerCatalogoPublicoAsync(int pagina, int tamano, int? especieId, int? tamanoId, byte? sexo);
+    Task<Mascotas?> ObtenerDetallePublicoAsync(int mascotaId);
 }

@@ -68,4 +68,33 @@ public static class MascotaMappings
         mascota.Descripcion = dto.Descripcion;
         mascota.Esterilizada = dto.Esterilizada;
     }
+
+    /// <summary>
+    /// Obtener el DTO de detalle de una entidad Mascota.
+    /// </summary>
+    public static MascotaDetalleDTO ToDetalleDto(this Mascotas m)
+    {
+        return new MascotaDetalleDTO
+        {
+            Id = m.MascotaId,
+            Nombre = m.Nombre,
+            Especie = m.Especie?.Nombre ?? "",
+            Raza = m.Raza?.Nombre,
+            Sexo = m.Sexo == 0 ? "Macho" : "Hembra",
+            EdadAproximada = m.EdadAproximada ?? 0,
+            Descripcion = m.Descripcion,
+            Esterilizada = m.Esterilizada,
+            Estado = m.Estado switch
+            {
+                0 => "Disponible",
+                1 => "En Proceso",
+                2 => "Adoptada",
+                _ => "No Disponible"
+            },
+            Refugio = m.Refugio?.Nombre ?? "Refugio no asignado",
+            RefugioTelefono = m.Refugio?.Telefono,
+            // Ordenamos para que la foto principal aparezca de primera en el array
+            Fotos = m.Multimedia?.OrderByDescending(f => f.EsPrincipal).Select(f => f.Archivo).ToList() ?? new()
+        };
+    }
 }
