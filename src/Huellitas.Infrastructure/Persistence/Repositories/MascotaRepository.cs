@@ -32,7 +32,7 @@ public class MascotaRepository : IMascotaRepository
      
     public async Task<bool> TieneSolicitudesActivasAsync(int mascotaId)
     {
-        return await _context.SolicitudesAdopcions
+        return await _context.SolicitudesAdopcion
             .AnyAsync(s => s.MascotaId == mascotaId 
                         && s.Activo 
                         && s.Estado != 5 

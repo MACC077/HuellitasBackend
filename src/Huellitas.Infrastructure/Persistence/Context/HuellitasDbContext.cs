@@ -71,7 +71,7 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<Seguimientos> Seguimientos { get; set; }
 
-    public virtual DbSet<SolicitudesAdopcion> SolicitudesAdopcions { get; set; }
+    public virtual DbSet<SolicitudesAdopcion> SolicitudesAdopcion { get; set; }
 
     public virtual DbSet<Tamanos> Tamanos { get; set; }
 
