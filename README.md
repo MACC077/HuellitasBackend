@@ -50,8 +50,8 @@ Huellitas.API
      |
      v
 Huellitas.Application
-     ^
      |
+     v
 Huellitas.Infrastructure
 ```
 
