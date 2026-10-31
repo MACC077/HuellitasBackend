@@ -3,6 +3,7 @@ using Huellitas.Application.Common.Exceptions;
 using Huellitas.Application.DTOs.Mascotas;
 using Huellitas.Application.Interfaces.Services;
 using Huellitas.Application.Mappings;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Entities;
 
@@ -31,7 +32,7 @@ public class MascotaService : IMascotaService
         var mascota = dto.ToEntity();
 
         mascota.RefugioId = refugio.RefugioId;
-        mascota.Estado = 0; // Disponible
+        mascota.Estado = (byte)EstadoMascota.Disponible;
         mascota.FechaIngreso = DateOnly.FromDateTime(DateTime.Now);
         mascota.FechaUltimaActualizacion = DateTime.Now;
         mascota.Activo = true;

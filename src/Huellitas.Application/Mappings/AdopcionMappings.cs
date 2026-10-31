@@ -32,4 +32,29 @@ public static class AdopcionMappings
             Estado = "Enviada" // Al ser recién creada, siempre es Enviada
         };
     }
+
+
+    public static SolicitudResumenDTO ToResumenDto(this SolicitudesAdopcion s)
+    {
+        return new SolicitudResumenDTO
+        {
+            SolicitudId = s.SolicitudId,
+            Codigo = s.Codigo,
+            MascotaNombre = s.Mascota?.Nombre ?? "",
+            MascotaFoto = s.Mascota?.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo,
+            AdoptanteNombre = s.Usuario?.Nombre ?? "",
+            FechaEnvio = s.FechaEnvio,
+            Estado = s.Estado switch
+            {
+                0 => "Enviada",
+                1 => "En Revisión",
+                2 => "Entrevista",
+                3 => "Aprobada",
+                4 => "Rechazada",
+                5 => "Finalizada",
+                6 => "Cancelada",
+                _ => "Desconocido"
+            }
+        };
+    }
 }

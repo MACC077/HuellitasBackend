@@ -39,4 +39,51 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<(IEnumerable<SolicitudesAdopcion> Items, int Total)> ObtenerPorRefugioAsync(int refugioId, int pagina, int tamano)
+    {
+        var query = _context.SolicitudesAdopcion
+            .Include(s => s.Usuario)
+            .Include(s => s.Mascota)
+            .Where(s => s.Mascota.RefugioId == refugioId && s.Activo)
+            .OrderByDescending(s => s.FechaEnvio);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<(IEnumerable<SolicitudesAdopcion> Items, int Total)> ObtenerPorAdoptanteAsync(int usuarioId, int pagina, int tamano)
+    {
+        var query = _context.SolicitudesAdopcion
+            .Include(s => s.Mascota)
+                .ThenInclude(m => m.Multimedia)
+            .Where(s => s.UsuarioId == usuarioId && s.Activo)
+            .OrderByDescending(s => s.FechaEnvio);
+
+        var total = await query.CountAsync();
+        var items = await query
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task<SolicitudesAdopcion?> ObtenerPorIdConMascotaAsync(int solicitudId)
+    {
+        return await _context.SolicitudesAdopcion
+            .Include(s => s.Mascota)
+            .FirstOrDefaultAsync(s => s.SolicitudId == solicitudId && s.Activo);
+    }
+
+    public async Task ActualizarAsync(SolicitudesAdopcion solicitud)
+    {
+        _context.SolicitudesAdopcion.Update(solicitud);
+        await _context.SaveChangesAsync();
+    }
 }
