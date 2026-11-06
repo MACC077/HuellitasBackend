@@ -89,4 +89,17 @@ public class AdopcionesController : ControllerBase
         await _adopcionService.RechazarSolicitudAsync(id, dto, User.GetUserId());
         return Ok(new { mensaje = "Solicitud rechazada correctamente." });
     }
+
+    /// <summary>
+    /// HU-ADO-04: Finalizar la adopción y cerrar las demás solicitudes automáticamente.
+    /// </summary>
+    [HttpPatch("{id}/finalizar", Name = "FinalizarAdopcion")]
+    [Authorize(Roles = "Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Finalizar(int id)
+    {
+        await _adopcionService.FinalizarAdopcionAsync(id, User.GetUserId());
+        return Ok(new { mensaje = "Adopción finalizada exitosamente. Se ha generado la constancia." });
+    }
 }

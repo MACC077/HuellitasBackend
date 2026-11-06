@@ -10,4 +10,5 @@ public interface IAdopcionService
     Task<PagedResult<SolicitudResumenDTO>> ObtenerBandejaRefugioAsync(int usuarioId, int pagina, int tamano);
     Task AprobarSolicitudAsync(int solicitudId, AprobarSolicitudDTO dto, int usuarioId);
     Task RechazarSolicitudAsync(int solicitudId, RechazarSolicitudDTO dto, int usuarioId);
+    Task FinalizarAdopcionAsync(int solicitudId, int usuarioId);
 }

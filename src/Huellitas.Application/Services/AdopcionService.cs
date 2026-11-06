@@ -64,7 +64,7 @@ public class AdopcionService : IAdopcionService
         solicitud.UsuarioId = usuarioId;
         solicitud.Codigo = $"SOL-{Guid.NewGuid().ToString().Substring(0, 6).ToUpper()}";
         solicitud.FechaEnvio = DateTime.Now;
-        solicitud.Estado = 0;
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Enviada;
         solicitud.Activo = true;
         solicitud.FechaCreacion = DateTime.Now;
 
@@ -129,10 +129,10 @@ public class AdopcionService : IAdopcionService
     {
         var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
 
-        if (solicitud.Estado != 0 && solicitud.Estado != 1) // 0=Enviada, 1=En Revisión
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada && solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision)
             throw AppException.Conflict("Solo se pueden aprobar solicitudes que estén en estado Enviada o En Revisión.");
 
-        solicitud.Estado = 3; // 3 = Aprobada
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Aprobada;
         solicitud.Observaciones = dto.Observaciones;
         solicitud.FechaModificacion = DateTime.Now;
 
@@ -146,10 +146,10 @@ public class AdopcionService : IAdopcionService
 
         var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
 
-        if (solicitud.Estado != 0 && solicitud.Estado != 1)
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada && solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision)
             throw AppException.Conflict("Solo se pueden rechazar solicitudes activas.");
 
-        solicitud.Estado = 4; // 4 = Rechazada
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Rechazada;
         solicitud.MotivoRechazo = dto.MotivoRechazo;
         solicitud.FechaModificacion = DateTime.Now;
 
@@ -170,5 +170,58 @@ public class AdopcionService : IAdopcionService
             throw AppException.Forbidden("No tienes permiso para gestionar esta solicitud.");
 
         return solicitud;
+    }
+
+    public async Task FinalizarAdopcionAsync(int solicitudId, int usuarioId)
+    {
+        //Validar que el refugio es dueño de la solicitud
+        var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
+
+        //Validar que la solicitud esté Aprobada
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Aprobada)
+            throw AppException.Conflict("Solo se pueden finalizar adopciones que hayan sido aprobadas previamente.");
+
+        //Obtener todas las demás solicitudes activas para esta mascota
+        var otrasSolicitudes = await _solicitudRepo.ObtenerSolicitudesActivasPorMascotaAsync(solicitud.MascotaId);
+        otrasSolicitudes = otrasSolicitudes.Where(s => s.SolicitudId != solicitudId).ToList();
+
+        //Actualizar estados
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Finalizada; 
+        solicitud.FechaModificacion = DateTime.Now;
+
+        foreach (var otra in otrasSolicitudes)
+        {
+            otra.Estado = (byte)EstadoSolicitudAdopcion.Cerrada;
+            otra.Observaciones = "Proceso cerrado automáticamente. La mascota fue adoptada por otro usuario.";
+            otra.FechaModificacion = DateTime.Now;
+        }
+
+        //Actualizar la Mascota a Adoptada
+        var mascota = solicitud.Mascota;
+        mascota.Estado = (byte)EstadoMascota.Adoptada;
+        mascota.FechaUltimaActualizacion = DateTime.Now;
+
+        //Crear el registro de Adopción (La constancia)
+        var nuevaAdopcion = new Adopciones
+        {
+            SolicitudId = solicitudId,
+            FechaFinalizacion = DateTime.Now,
+            CodigoConstancia = $"ACT-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+
+        //Crear la Bitácora
+        var bitacora = new Bitacoras
+        {
+            MascotaId = mascota.MascotaId,
+            Tipo = 3, // 3 = Adopción
+            Descripcion = $"Adopción finalizada. Constancia: {nuevaAdopcion.CodigoConstancia}.",
+            FechaCreacion = DateTime.Now
+        };
+
+        //Ejecutar la transacción
+        await _solicitudRepo.EjecutarTransaccionFinalizacionAsync(
+            solicitud, otrasSolicitudes, mascota, nuevaAdopcion, bitacora);
     }
 }

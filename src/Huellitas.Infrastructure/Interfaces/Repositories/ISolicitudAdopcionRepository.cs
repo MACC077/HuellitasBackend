@@ -11,4 +11,12 @@ public interface ISolicitudAdopcionRepository
     Task<(IEnumerable<SolicitudesAdopcion> Items, int Total)> ObtenerPorAdoptanteAsync(int usuarioId, int pagina, int tamano);
     Task<SolicitudesAdopcion?> ObtenerPorIdConMascotaAsync(int solicitudId);
     Task ActualizarAsync(SolicitudesAdopcion solicitud);
+    Task<List<SolicitudesAdopcion>> ObtenerSolicitudesActivasPorMascotaAsync(int mascotaId);
+    Task EjecutarTransaccionFinalizacionAsync(
+        SolicitudesAdopcion solicitudAprobada,
+        List<SolicitudesAdopcion> otrasSolicitudes,
+        Mascotas mascota,
+        Adopciones nuevaAdopcion,
+        Bitacoras bitacora
+    );
 }

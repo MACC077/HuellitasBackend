@@ -1,4 +1,5 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -16,9 +17,9 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             .AnyAsync(s => s.UsuarioId == usuarioId
                         && s.MascotaId == mascotaId
                         && s.Activo
-                        && s.Estado != 5
-                        && s.Estado != 6
-                        && s.Estado != 7);
+                        && s.Estado != (byte)EstadoSolicitudAdopcion.Finalizada
+                        && s.Estado != (byte)EstadoSolicitudAdopcion.Cancelada
+                        && s.Estado != (byte)EstadoSolicitudAdopcion.Cerrada);
     }
         
 
@@ -61,7 +62,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
     {
         var query = _context.SolicitudesAdopcion
             .Include(s => s.Mascota)
-                .ThenInclude(m => m.Multimedia)
+            .ThenInclude(m => m.Multimedia)
             .Where(s => s.UsuarioId == usuarioId && s.Activo)
             .OrderByDescending(s => s.FechaEnvio);
 
@@ -86,4 +87,39 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
         _context.SolicitudesAdopcion.Update(solicitud);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<List<SolicitudesAdopcion>> ObtenerSolicitudesActivasPorMascotaAsync(int mascotaId)
+    {
+        return await _context.SolicitudesAdopcion
+            .Where(s => s.MascotaId == mascotaId && s.Activo && s.Estado < (byte)EstadoSolicitudAdopcion.Finalizada)
+            .ToListAsync();
+    }
+
+    public async Task EjecutarTransaccionFinalizacionAsync(
+        SolicitudesAdopcion solicitudAprobada,
+        List<SolicitudesAdopcion> otrasSolicitudes,
+        Mascotas mascota,
+        Adopciones nuevaAdopcion,
+        Bitacoras bitacora)
+    {
+        //INICIO DE LA TRANSACCIÓN (Todo o nada)
+        using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            _context.SolicitudesAdopcion.Update(solicitudAprobada);
+            _context.SolicitudesAdopcion.UpdateRange(otrasSolicitudes);
+            _context.Mascotas.Update(mascota);
+            _context.Adopciones.Add(nuevaAdopcion);
+            _context.Bitacoras.Add(bitacora);
+
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync();
+            throw; // Lanza el error para que el Middleware lo capture
+        }
+    }
+
 }
