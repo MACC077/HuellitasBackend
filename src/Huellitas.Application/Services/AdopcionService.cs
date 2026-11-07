@@ -224,4 +224,72 @@ public class AdopcionService : IAdopcionService
         await _solicitudRepo.EjecutarTransaccionFinalizacionAsync(
             solicitud, otrasSolicitudes, mascota, nuevaAdopcion, bitacora);
     }
+
+    public async Task AgendarVisitaAsync(int solicitudId, AgendarVisitaDTO dto, int usuarioId)
+    {
+        //Validar que el refugio es dueño de la solicitud
+        var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
+
+        //Validar estado de la solicitud (debe estar Enviada (0) o EnRevision (1))
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada && solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision)
+            throw AppException.Conflict("Solo se puede agendar visita para solicitudes en estado Enviada o En Revisión.");
+
+        //Invalidar visitas anteriores si existen
+        var visitaAnterior = await _solicitudRepo.ObtenerVisitaActivaPorSolicitudAsync(solicitudId);
+        if (visitaAnterior != null)
+        {
+            visitaAnterior.Activo = false;
+            visitaAnterior.FechaModificacion = DateTime.Now;
+            await _solicitudRepo.ActualizarVisitaAsync(visitaAnterior);
+        }
+
+        //Crear la nueva visita
+        var nuevaVisita = new VisitasEntrevista
+        {
+            SolicitudId = solicitudId,
+            Fecha = dto.Fecha,
+            Modalidad = dto.Modalidad,
+            Estado = (byte)EstadoVisitaEntrevista.Propuesta,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+
+        await _solicitudRepo.InsertarVisitaAsync(nuevaVisita);
+
+        //Actualizar estado de la solicitud a Entrevista (2)
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Entrevista;
+        solicitud.FechaModificacion = DateTime.Now;
+        await _solicitudRepo.ActualizarAsync(solicitud);
+    }
+
+    public async Task ConfirmarVisitaAsync(int solicitudId, ConfirmarVisitaDTO dto, int usuarioId)
+    {
+        //Validar que la solicitud pertenece al adoptante logueado
+        var solicitud = await _solicitudRepo.ObtenerPorIdConMascotaAsync(solicitudId)
+            ?? throw AppException.NotFound("Solicitud no encontrada.");
+
+        if (solicitud.UsuarioId != usuarioId)
+            throw AppException.Forbidden("No tienes permiso para confirmar esta visita.");
+
+        //Obtener la visita activa
+        var visita = await _solicitudRepo.ObtenerVisitaActivaPorSolicitudAsync(solicitudId)
+            ?? throw AppException.NotFound("No hay una visita agendada para esta solicitud.");
+
+        if (visita.Estado != (byte)EstadoVisitaEntrevista.Propuesta) // Si ya fue confirmada o reprogramada
+            throw AppException.Conflict("Esta visita ya fue gestionada.");
+
+        //Procesar la confirmación
+        if (dto.Aceptar)
+        {
+            visita.Estado = (byte)EstadoVisitaEntrevista.Confirmada; 
+        }
+        else
+        {
+            visita.Estado = (byte)EstadoVisitaEntrevista.Reprogramada; // 2 = Reprogramada (el adoptante rechazó la fecha)
+                               // Aquí el refugio tendría que agendar otra fecha con el endpoint anterior.
+        }
+
+        visita.FechaModificacion = DateTime.Now;
+        await _solicitudRepo.ActualizarVisitaAsync(visita);
+    }
 }

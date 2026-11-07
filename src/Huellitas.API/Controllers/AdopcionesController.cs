@@ -102,4 +102,30 @@ public class AdopcionesController : ControllerBase
         await _adopcionService.FinalizarAdopcionAsync(id, User.GetUserId());
         return Ok(new { mensaje = "Adopción finalizada exitosamente. Se ha generado la constancia." });
     }
+
+    /// <summary>
+    /// HU-ADO-05: Agendar una entrevista o visita (Solo Refugio).
+    /// </summary>
+    [HttpPost("{id}/agendar-visita", Name = "AgendarVisita")]
+    [Authorize(Roles = "Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> AgendarVisita(int id, [FromBody] AgendarVisitaDTO dto)
+    {
+        await _adopcionService.AgendarVisitaAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = "Visita agendada. El adoptante ha sido notificado." });
+    }
+
+    /// <summary>
+    /// HU-ADO-05: Confirmar o rechazar la fecha de la visita (Solo Adoptante).
+    /// </summary>
+    [HttpPatch("{id}/confirmar-visita", Name = "ConfirmarVisita")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> ConfirmarVisita(int id, [FromBody] ConfirmarVisitaDTO dto)
+    {
+        await _adopcionService.ConfirmarVisitaAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = dto.Aceptar ? "Visita confirmada." : "Fecha rechazada. El refugio propondrá una nueva." });
+    }
 }

@@ -122,4 +122,21 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
         }
     }
 
+    public async Task InsertarVisitaAsync(VisitasEntrevista visita)
+    {
+        _context.VisitasEntrevista.Add(visita);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<VisitasEntrevista?> ObtenerVisitaActivaPorSolicitudAsync(int solicitudId)
+    {
+        return await _context.VisitasEntrevista
+            .FirstOrDefaultAsync(v => v.SolicitudId == solicitudId && v.Activo);
+    }
+
+    public async Task ActualizarVisitaAsync(VisitasEntrevista visita)
+    {
+        _context.VisitasEntrevista.Update(visita);
+        await _context.SaveChangesAsync();
+    }
 }

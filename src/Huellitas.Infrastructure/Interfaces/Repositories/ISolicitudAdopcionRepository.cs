@@ -19,4 +19,7 @@ public interface ISolicitudAdopcionRepository
         Adopciones nuevaAdopcion,
         Bitacoras bitacora
     );
+    Task InsertarVisitaAsync(VisitasEntrevista visita);
+    Task<VisitasEntrevista?> ObtenerVisitaActivaPorSolicitudAsync(int solicitudId);
+    Task ActualizarVisitaAsync(VisitasEntrevista visita);
 }

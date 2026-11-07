@@ -11,4 +11,6 @@ public interface IAdopcionService
     Task AprobarSolicitudAsync(int solicitudId, AprobarSolicitudDTO dto, int usuarioId);
     Task RechazarSolicitudAsync(int solicitudId, RechazarSolicitudDTO dto, int usuarioId);
     Task FinalizarAdopcionAsync(int solicitudId, int usuarioId);
+    Task AgendarVisitaAsync(int solicitudId, AgendarVisitaDTO dto, int usuarioId);
+    Task ConfirmarVisitaAsync(int solicitudId, ConfirmarVisitaDTO dto, int usuarioId);
 }
