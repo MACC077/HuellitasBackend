@@ -129,6 +129,39 @@ public class AdopcionesController : ControllerBase
         return Ok(new { mensaje = dto.Aceptar ? "Visita confirmada." : "Fecha rechazada. El refugio propondrá una nueva." });
     }
 
+    // ═══════════════════════════════════════════════════════
+    // HU-ADO-06: Soportes
+    // ═══════════════════════════════════════════════════════
+
+    /// <summary>
+    /// HU-ADO-06: Asociar un documento (previamente subido a Cloudinary) a la solicitud.
+    /// </summary>
+    /// <remarks>
+    /// El archivo físico debe subirse primero a POST /api/v1/Archivos con tipo="soportes".
+    /// </remarks>
+    [HttpPost("{id}/soportes", Name = "GuardarSoporte")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GuardarSoporte(int id, [FromBody] CrearDocumentoSoporteDTO dto)
+    {
+        //Recibe el JSON con Tipo y ArchivoUrl (ya no es IFormFile)
+        var result = await _adopcionService.GuardarDocumentoAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = "Documento registrado exitosamente.", documento = result });
+    }
+
+    /// <summary>
+    /// HU-ADO-06: Listar los documentos de soporte de una solicitud.
+    /// </summary>
+    [HttpGet("{id}/soportes", Name = "GetSoportes")]
+    [Authorize(Roles = "Adoptante,Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetSoportes(int id)
+    {
+        var result = await _adopcionService.ObtenerDocumentosAsync(id, User.GetUserId());
+        return Ok(result);
+    }
+
     /// <summary>
     /// HU-ADO-07: Descargar la constancia de adopción en PDF.
     /// </summary>

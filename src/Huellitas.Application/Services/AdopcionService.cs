@@ -322,4 +322,66 @@ public class AdopcionService : IAdopcionService
             fechaFinalizacion: adopcion.FechaFinalizacion
         );
     }
+
+    public async Task<DocumentoSoporteDTO> GuardarDocumentoAsync(int solicitudId, CrearDocumentoSoporteDTO dto, int usuarioId)
+    {
+        // 1. Validar que la solicitud existe y pertenece al adoptante
+        var solicitud = await _solicitudRepo.ObtenerPorIdConMascotaAsync(solicitudId)
+            ?? throw AppException.NotFound("Solicitud no encontrada.");
+
+        if (solicitud.UsuarioId != usuarioId)
+            throw AppException.Forbidden("No tienes permiso para subir documentos a esta solicitud.");
+
+        if (solicitud.Estado >= 5)
+            throw AppException.Conflict("No se pueden subir documentos a una solicitud cerrada o finalizada.");
+
+        // 2. Registrar la URL en la base de datos
+        var documento = new DocumentosSoporte
+        {
+            SolicitudId = solicitudId,
+            Tipo = dto.Tipo,
+            Archivo = dto.ArchivoUrl, // 👈 Usamos la URL del DTO
+            FechaCarga = DateTime.Now,
+            Activo = true
+        };
+
+        await _solicitudRepo.InsertarDocumentoSoporteAsync(documento);
+
+        return new DocumentoSoporteDTO
+        {
+            DocumentoId = documento.DocumentoId,
+            Tipo = documento.Tipo,
+            ArchivoUrl = documento.Archivo,
+            FechaCarga = documento.FechaCarga
+        };
+    }
+
+    public async Task<IEnumerable<DocumentoSoporteDTO>> ObtenerDocumentosAsync(int solicitudId, int usuarioId)
+    {
+        var solicitud = await _solicitudRepo.ObtenerPorIdConMascotaAsync(solicitudId)
+            ?? throw AppException.NotFound("Solicitud no encontrada.");
+
+        // Validar seguridad (adoptante dueño o refugio dueño)
+        bool esAdoptante = solicitud.UsuarioId == usuarioId;
+        bool esRefugio = false;
+
+        if (!esAdoptante)
+        {
+            var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+            esRefugio = refugio != null && solicitud.Mascota.RefugioId == refugio.RefugioId;
+        }
+
+        if (!esAdoptante && !esRefugio)
+            throw AppException.Forbidden("No tienes permiso para ver estos documentos.");
+
+        var documentos = await _solicitudRepo.ObtenerDocumentosPorSolicitudAsync(solicitudId);
+
+        return documentos.Select(d => new DocumentoSoporteDTO
+        {
+            DocumentoId = d.DocumentoId,
+            Tipo = d.Tipo,
+            ArchivoUrl = d.Archivo,
+            FechaCarga = d.FechaCarga
+        });
+    }
 }

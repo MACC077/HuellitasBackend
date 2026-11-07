@@ -150,4 +150,18 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             .ThenInclude(m => m.Refugio)
             .FirstOrDefaultAsync(a => a.SolicitudId == solicitudId && a.Activo);
     }
+
+    public async Task InsertarDocumentoSoporteAsync(DocumentosSoporte documento)
+    {
+        _context.DocumentosSoportes.Add(documento);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<DocumentosSoporte>> ObtenerDocumentosPorSolicitudAsync(int solicitudId)
+    {
+        return await _context.DocumentosSoportes
+            .Where(d => d.SolicitudId == solicitudId && d.Activo)
+            .OrderByDescending(d => d.FechaCarga)
+            .ToListAsync();
+    }
 }

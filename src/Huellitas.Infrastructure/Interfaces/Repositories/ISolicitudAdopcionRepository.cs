@@ -23,4 +23,6 @@ public interface ISolicitudAdopcionRepository
     Task<VisitasEntrevista?> ObtenerVisitaActivaPorSolicitudAsync(int solicitudId);
     Task ActualizarVisitaAsync(VisitasEntrevista visita);
     Task<Adopciones?> ObtenerAdopcionConDetallesAsync(int solicitudId);
+    Task InsertarDocumentoSoporteAsync(DocumentosSoporte documento);
+    Task<IEnumerable<DocumentosSoporte>> ObtenerDocumentosPorSolicitudAsync(int solicitudId);
 }

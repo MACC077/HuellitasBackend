@@ -1,4 +1,6 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using CloudinaryDotNet;
+using Huellitas.Infrastructure.Extensions;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Interfaces.Services;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Repositories;
@@ -28,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<ICorreoService, CorreoService>();
         services.AddScoped<ITokenService, TokenService>();
         services.AddScoped<IPdfService, PdfService>();
+        services.AddCloudinaryService(config); //Almacenamiento
+        services.AddScoped<IFileStorageService, CloudinaryFileStorageService>();
 
         return services;
     }
