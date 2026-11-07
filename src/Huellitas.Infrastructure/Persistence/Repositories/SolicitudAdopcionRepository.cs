@@ -139,4 +139,15 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
         _context.VisitasEntrevista.Update(visita);
         await _context.SaveChangesAsync();
     }
+
+    public async Task<Adopciones?> ObtenerAdopcionConDetallesAsync(int solicitudId)
+    {
+        return await _context.Adopciones
+            .Include(a => a.Solicitud)
+            .ThenInclude(s => s.Usuario)
+            .Include(a => a.Solicitud)
+            .ThenInclude(s => s.Mascota)
+            .ThenInclude(m => m.Refugio)
+            .FirstOrDefaultAsync(a => a.SolicitudId == solicitudId && a.Activo);
+    }
 }

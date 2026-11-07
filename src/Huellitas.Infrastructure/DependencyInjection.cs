@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<ICorreoService, CorreoService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPdfService, PdfService>();
 
         return services;
     }

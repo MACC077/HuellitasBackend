@@ -22,4 +22,5 @@ public interface ISolicitudAdopcionRepository
     Task InsertarVisitaAsync(VisitasEntrevista visita);
     Task<VisitasEntrevista?> ObtenerVisitaActivaPorSolicitudAsync(int solicitudId);
     Task ActualizarVisitaAsync(VisitasEntrevista visita);
+    Task<Adopciones?> ObtenerAdopcionConDetallesAsync(int solicitudId);
 }

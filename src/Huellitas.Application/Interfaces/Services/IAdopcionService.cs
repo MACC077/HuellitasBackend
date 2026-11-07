@@ -13,4 +13,5 @@ public interface IAdopcionService
     Task FinalizarAdopcionAsync(int solicitudId, int usuarioId);
     Task AgendarVisitaAsync(int solicitudId, AgendarVisitaDTO dto, int usuarioId);
     Task ConfirmarVisitaAsync(int solicitudId, ConfirmarVisitaDTO dto, int usuarioId);
+    Task<byte[]> GenerarConstanciaPdfAsync(int solicitudId, int usuarioId);
 }

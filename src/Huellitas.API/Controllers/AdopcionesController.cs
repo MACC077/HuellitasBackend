@@ -128,4 +128,18 @@ public class AdopcionesController : ControllerBase
         await _adopcionService.ConfirmarVisitaAsync(id, dto, User.GetUserId());
         return Ok(new { mensaje = dto.Aceptar ? "Visita confirmada." : "Fecha rechazada. El refugio propondrá una nueva." });
     }
+
+    /// <summary>
+    /// HU-ADO-07: Descargar la constancia de adopción en PDF.
+    /// </summary>
+    [HttpGet("{id}/constancia", Name = "DescargarConstancia")]
+    [Authorize(Roles = "Adoptante,Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DescargarConstancia(int id)
+    {
+        var pdfBytes = await _adopcionService.GenerarConstanciaPdfAsync(id, User.GetUserId());
+        //Retorna el archivo al navegador para que se descargue
+        return File(pdfBytes, "application/pdf", $"Constancia_Adopcion_Huellitas_{id}.pdf");
+    }
 }

@@ -5,6 +5,7 @@ using Huellitas.Application.Interfaces.Services;
 using Huellitas.Application.Mappings;
 using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
+using Huellitas.Infrastructure.Interfaces.Services;
 using Huellitas.Infrastructure.Persistence.Entities;
 using System.Text.Json;
 
@@ -16,13 +17,15 @@ public class AdopcionService : IAdopcionService
     private readonly IMascotaRepository _mascotaRepo;
     private readonly IRefugioRepository _refugioRepo;
     private readonly IPerfilAdoptanteRepository _perfilRepo;
+    private readonly IPdfService _pdfService;
 
-    public AdopcionService(ISolicitudAdopcionRepository solicitudRepo, IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo, IPerfilAdoptanteRepository perfilRepo)
+    public AdopcionService(ISolicitudAdopcionRepository solicitudRepo, IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo, IPerfilAdoptanteRepository perfilRepo, IPdfService pdfService)
     {
         _solicitudRepo = solicitudRepo;
         _mascotaRepo = mascotaRepo;
         _refugioRepo = refugioRepo;
         _perfilRepo = perfilRepo;
+        _pdfService = pdfService;
     }
 
 
@@ -291,5 +294,32 @@ public class AdopcionService : IAdopcionService
 
         visita.FechaModificacion = DateTime.Now;
         await _solicitudRepo.ActualizarVisitaAsync(visita);
+    }
+
+    public async Task<byte[]> GenerarConstanciaPdfAsync(int solicitudId, int usuarioId)
+    {
+        var adopcion = await _solicitudRepo.ObtenerAdopcionConDetallesAsync(solicitudId)
+            ?? throw AppException.NotFound("Constancia no encontrada o adopción no finalizada.");
+
+        // Validar seguridad: solo el adoptante dueño o el refugio dueño pueden descargarla
+        var esAdoptante = adopcion.Solicitud.UsuarioId == usuarioId;
+
+        // Si no es el adoptante, validamos que sea el refugio dueño de la mascota
+        if (!esAdoptante)
+        {
+            var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+            if (refugio == null || adopcion.Solicitud.Mascota.RefugioId != refugio.RefugioId)
+                throw AppException.Forbidden("No tienes permiso para descargar esta constancia.");
+        }
+
+        // Generar el PDF
+        return _pdfService.GenerarConstanciaAdopcion(
+            adoptanteNombre: adopcion.Solicitud.Usuario.Nombre,
+            adoptanteCorreo: adopcion.Solicitud.Usuario.Correo,
+            mascotaNombre: adopcion.Solicitud.Mascota.Nombre,
+            refugioNombre: adopcion.Solicitud.Mascota.Refugio.Nombre,
+            codigoConstancia: adopcion.CodigoConstancia,
+            fechaFinalizacion: adopcion.FechaFinalizacion
+        );
     }
 }
