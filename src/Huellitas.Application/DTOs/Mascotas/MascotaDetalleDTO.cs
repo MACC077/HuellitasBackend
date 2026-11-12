@@ -1,8 +1,9 @@
-﻿namespace Huellitas.Application.DTOs.Mascotas;
+namespace Huellitas.Application.DTOs.Mascotas;
 
 public class MascotaDetalleDTO
 {
     public int Id { get; set; }
+    public int RefugioId { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Especie { get; set; } = string.Empty;
     public string? Raza { get; set; }

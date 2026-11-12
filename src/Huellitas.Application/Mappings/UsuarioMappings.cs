@@ -1,4 +1,4 @@
-﻿using Huellitas.Application.DTOs.Usuarios;
+using Huellitas.Application.DTOs.Usuarios;
 using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Persistence.Entities;
 
@@ -40,6 +40,7 @@ public static class UsuarioMappings
         return new UsuarioPerfilDTO
         {
             Id = usuario.UsuarioId,
+            RefugioId = usuario.RefugioId,
             Nombre = usuario.Nombre,
             Correo = usuario.Correo,
             Telefono = usuario.Telefono,

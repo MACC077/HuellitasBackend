@@ -1,4 +1,4 @@
-﻿using Huellitas.Application.DTOs.Mascotas;
+using Huellitas.Application.DTOs.Mascotas;
 using Huellitas.Infrastructure.Persistence.Entities;
 
 namespace Huellitas.Application.Mappings;
@@ -91,6 +91,7 @@ public static class MascotaMappings
                 2 => "Adoptada",
                 _ => "No Disponible"
             },
+            RefugioId = m.RefugioId,
             Refugio = m.Refugio?.Nombre ?? "Refugio no asignado",
             RefugioTelefono = m.Refugio?.Telefono,
             // Ordenamos para que la foto principal aparezca de primera en el array
