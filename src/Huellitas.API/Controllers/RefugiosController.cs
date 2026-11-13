@@ -1,50 +1,76 @@
 using Huellitas.API.Extensions;
-using Huellitas.Infrastructure.Persistence.Context;
+using Huellitas.Application.DTOs.Refugios;
+using Huellitas.Application.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace Huellitas.API.Controllers;
 
 [ApiController]
-[Route("api/refugios")]
 [Route("api/v{version:apiVersion}/[controller]")]
-public class RefugiosController(HuellitasDbContext context) : ControllerBase
+public class RefugiosController : ControllerBase
 {
-    [HttpGet]
-    [Authorize(Roles = "Administrador")]
-    public async Task<IActionResult> Listar([FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 10)
+    private readonly IRefugioService _refugioService;
+    public RefugiosController(IRefugioService refugioService) => _refugioService = refugioService;
+
+    /// <summary>HU-REF-02: Obtener el perfil del refugio autenticado.</summary>
+    [HttpGet("mi-perfil", Name = "GetPerfilRefugio")]
+    [Authorize(Roles = "Refugio")]
+    public async Task<IActionResult> GetPerfil()
     {
-        if (pagina < 1 || tamanoPagina < 1 || tamanoPagina > 100)
-            return BadRequest(new { mensaje = "La página debe ser positiva y el tamaño debe estar entre 1 y 100." });
-        var consulta = context.Refugios.AsNoTracking().Where(r => r.Activo);
-        var total = await consulta.CountAsync();
-        var items = await consulta.OrderBy(r => r.RefugioId)
-            .Skip((pagina - 1) * tamanoPagina).Take(tamanoPagina)
-            .Select(r => new { id = r.RefugioId, r.Nombre, r.Nit, r.Direccion, r.Telefono,
-                r.Correo, r.Encargado, r.RedesSociales, r.Descripcion, r.EstadoVerificacion,
-                r.FechaVerificacion, r.MotivoRechazo, r.Activo, r.FechaCreacion, r.FechaModificacion })
-            .ToListAsync();
-        return Ok(new { items, pagina, tamanoPagina, total, totalPaginas = (int)Math.Ceiling((double)total / tamanoPagina) });
+        var result = await _refugioService.ObtenerMiPerfilAsync(User.GetUserId());
+        return Ok(result);
     }
 
-    [HttpGet("{id:int}")]
-    public async Task<IActionResult> Obtener(int id)
+    /// <summary>HU-REF-02: Actualizar los datos del perfil del refugio.</summary>
+    [HttpPut("mi-perfil", Name = "UpdatePerfilRefugio")]
+    [Authorize(Roles = "Refugio")]
+    public async Task<IActionResult> UpdatePerfil([FromBody] ActualizarRefugioDTO dto)
     {
-        var usuarioId = User.GetUserId();
-        var administrador = User.IsInRole("Administrador");
-        var refugio = await context.Refugios.AsNoTracking()
-            .Where(r => r.RefugioId == id && r.Activo &&
-                (r.EstadoVerificacion == 1 || administrador || r.Usuarios.Any(u => u.UsuarioId == usuarioId && u.Activo)))
-            .Select(r => new { id = r.RefugioId, r.Nombre, r.Nit, r.Direccion, r.Telefono,
-                r.Correo, r.Encargado, r.RedesSociales, r.Descripcion, r.EstadoVerificacion,
-                r.FechaVerificacion, r.MotivoRechazo, r.Activo, r.FechaCreacion, r.FechaModificacion,
-                promedioCalificacion = r.Calificaciones.Where(c => c.Activo && c.EstadoModeracion == 0).Average(c => (double?)c.Puntaje),
-                totalAdopciones = context.Adopciones.Count(a => a.Activo && a.Solicitud.Mascota.RefugioId == r.RefugioId),
-                requisitos = r.RequisitosAdopcions.Where(q => q.Activo).OrderBy(q => q.Orden)
-                    .Select(q => new { id = q.RequisitoId, q.RefugioId, q.Descripcion, q.EsObligatorio,
-                        q.Orden, q.Activo, q.FechaCreacion, q.FechaModificacion }).ToList() })
-            .SingleOrDefaultAsync();
-        return refugio is null ? NotFound() : Ok(refugio);
+        await _refugioService.ActualizarPerfilAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Perfil actualizado correctamente." });
+    }
+
+    /// <summary>HU-REF-02: Agregar un requisito de adopción.</summary>
+    [HttpPost("requisitos", Name = "AgregarRequisito")]
+    [Authorize(Roles = "Refugio")]
+    public async Task<IActionResult> AgregarRequisito([FromBody] RequisitoDTO dto)
+    {
+        await _refugioService.AgregarRequisitoAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Requisito agregado." });
+    }
+
+    /// <summary>HU-REF-01: Verificar o rechazar un refugio (Solo Administrador).</summary>
+    [HttpPatch("{id}/verificar", Name = "VerificarRefugio")]
+    [Authorize(Roles = "Administrador")]
+    public async Task<IActionResult> Verificar(int id, [FromBody] VerificarRefugioDTO dto)
+    {
+        await _refugioService.VerificarRefugioAsync(id, dto);
+        return Ok(new { mensaje = dto.Aprobado ? "Refugio verificado correctamente." : "Refugio rechazado." });
+    }
+
+    /// <summary>
+    /// HU-REF-02: Listar los refugios verificados (Público).
+    /// </summary>
+    [HttpGet(Name = "GetRefugiosPublicos")]
+    [AllowAnonymous] //Sin token
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetRefugios([FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
+    {
+        var result = await _refugioService.ObtenerRefugiosPublicosAsync(pagina, tamano);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// HU-REF-02: Obtener el perfil público de un refugio (Público).
+    /// </summary>
+    [HttpGet("{id}", Name = "GetPerfilPublicoRefugio")]
+    [AllowAnonymous] //Sin token
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetRefugioPublico(int id)
+    {
+        var result = await _refugioService.ObtenerPerfilPublicoAsync(id);
+        return Ok(result);
     }
 }
