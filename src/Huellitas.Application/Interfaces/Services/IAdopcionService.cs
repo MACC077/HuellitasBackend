@@ -13,6 +13,7 @@ public interface IAdopcionService
     Task FinalizarAdopcionAsync(int solicitudId, int usuarioId);
     Task AgendarVisitaAsync(int solicitudId, AgendarVisitaDTO dto, int usuarioId);
     Task ConfirmarVisitaAsync(int solicitudId, ConfirmarVisitaDTO dto, int usuarioId);
+    Task MarcarEnRevisionAsync(int solicitudId, int usuarioId);
     Task<byte[]> GenerarConstanciaPdfAsync(int solicitudId, int usuarioId);
     Task<DocumentoSoporteDTO> GuardarDocumentoAsync(int solicitudId, CrearDocumentoSoporteDTO dto, int usuarioId);
     Task<IEnumerable<DocumentoSoporteDTO>> ObtenerDocumentosAsync(int solicitudId, int usuarioId);

@@ -384,4 +384,22 @@ public class AdopcionService : IAdopcionService
             FechaCarga = d.FechaCarga
         });
     }
+
+    public async Task MarcarEnRevisionAsync(int solicitudId, int usuarioId)
+    {
+        // 1. Validar que el refugio es dueño de la solicitud
+        var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
+
+        // 2. Validar el estado actual (solo se puede revisar si está Enviada)
+        // Usamos (byte)EstadoSolicitudAdopcion.Enviada si seguimos usando byte, o simplemente el Enum si ya se migró.
+        // Para evitar errores si aún está como byte en la entidad, usamos la comparación con el valor del enum.
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada)
+            throw AppException.Conflict("Solo se pueden marcar en revisión las solicitudes que estén en estado 'Enviada'.");
+
+        // 3. Actualizar el estado
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.EnRevision;
+        solicitud.FechaModificacion = DateTime.Now;
+
+        await _solicitudRepo.ActualizarAsync(solicitud);
+    }
 }
