@@ -12,4 +12,5 @@ public interface IRefugioService
     Task VerificarRefugioAsync(int refugioId, VerificarRefugioDTO dto);
     Task<PagedResult<RefugioResumenDTO>> ObtenerRefugiosPublicosAsync(int pagina, int tamano);
     Task<RefugioPublicoDTO> ObtenerPerfilPublicoAsync(int refugioId);
+    Task SolicitarRegistroRefugioAsync(int usuarioId, CrearRefugioDTO dto);
 }

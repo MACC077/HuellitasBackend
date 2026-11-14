@@ -16,7 +16,8 @@ public class PerfilRefugioDTO
     public string Descripcion { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public string Telefono { get; set; } = string.Empty;
-    public string RedesSociales { get; set; } = string.Empty;
+    public Dictionary<string, string>? RedesSociales { get; set; }
+    //public string RedesSociales { get; set; } = string.Empty;
     public byte EstadoVerificacion { get; set; }
     public List<RequisitoDTO> Requisitos { get; set; } = new();
 }
@@ -26,7 +27,8 @@ public class ActualizarRefugioDTO
     public string Descripcion { get; set; } = string.Empty;
     public string Direccion { get; set; } = string.Empty;
     public string Telefono { get; set; } = string.Empty;
-    public string RedesSociales { get; set; } = string.Empty;
+    public Dictionary<string, string>? RedesSociales { get; set; }
+    //public string RedesSociales { get; set; } = string.Empty;
 }
 
 public class RequisitoDTO
@@ -60,4 +62,16 @@ public class RefugioPublicoDTO
     public bool Verificado { get; set; }
     public List<RequisitoDTO> Requisitos { get; set; } = new();
     public List<MascotaResumenDTO> MascotasDisponibles { get; set; } = new();
+}
+
+public class CrearRefugioDTO
+{
+    public string Nombre { get; set; } = string.Empty;
+    public string Nit { get; set; } = string.Empty;
+    public string Direccion { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Correo { get; set; }
+    public string? Encargado { get; set; }
+    public string? Descripcion { get; set; }
+    public Dictionary<string, string>? RedesSociales { get; set; }
 }

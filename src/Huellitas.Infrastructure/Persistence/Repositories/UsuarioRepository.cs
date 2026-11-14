@@ -110,4 +110,10 @@ public class UsuarioRepository : IUsuarioRepository
             .ThenInclude(c => c.Politica)
             .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
     }
+
+    public async Task<Usuarios?> ObtenerPorRefugioIdAsync(int refugioId)
+    {
+        return await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.RefugioId == refugioId && u.Activo);
+    }
 }

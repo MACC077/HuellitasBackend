@@ -1,4 +1,5 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -67,9 +68,9 @@ public class RefugioRepository : IRefugioRepository
 
     public async Task<(IEnumerable<Refugios> Items, int Total)> ObtenerRefugiosPublicosAsync(int pagina, int tamano)
     {
-        // Solo mostramos refugios verificados (EstadoVerificacion = 1)
+        // Solo mostramos refugios verificados
         var query = _context.Refugios
-            .Where(r => r.Activo && r.EstadoVerificacion == 1)
+            .Where(r => r.Activo && r.EstadoVerificacion == (byte)EstadoVerificacionRefugio.Verificado)
             .OrderBy(r => r.Nombre);
 
         var total = await query.CountAsync();
@@ -87,5 +88,10 @@ public class RefugioRepository : IRefugioRepository
             .Include(r => r.RequisitosAdopcions.Where(req => req.Activo))
             .Include(r => r.Mascota.Where(m => m.Activo && (m.Estado == 0 || m.Estado == 1))) // Sus mascotas disponibles
             .FirstOrDefaultAsync(r => r.RefugioId == refugioId && r.Activo);
+    }
+
+    public async Task<bool> ExisteNitAsync(string nit)
+    {
+        return await _context.Refugios.AnyAsync(r => r.Nit == nit);
     }
 }

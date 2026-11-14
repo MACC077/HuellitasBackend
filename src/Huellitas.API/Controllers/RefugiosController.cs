@@ -40,6 +40,23 @@ public class RefugiosController : ControllerBase
         return Ok(new { mensaje = "Requisito agregado." });
     }
 
+    /// <summary>
+    /// HU-REF-01: Solicitar el registro de un nuevo refugio (Cualquier usuario autenticado).
+    /// </summary>
+    /// <remarks>
+    /// El refugio quedará en estado Pendiente (0) hasta que un Administrador lo verifique.
+    /// El usuario que lo crea automáticamente pasa a tener el rol de Refugio.
+    /// </remarks>
+    [HttpPost("solicitar", Name = "SolicitarRegistroRefugio")]
+    [Authorize] // Cualquier usuario logueado puede solicitar ser refugio
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Solicitar([FromBody] CrearRefugioDTO dto)
+    {
+        await _refugioService.SolicitarRegistroRefugioAsync(User.GetUserId(), dto);
+        return Ok(new { mensaje = "Solicitud de registro enviada. Un administrador revisará tu caso." });
+    }
+
     /// <summary>HU-REF-01: Verificar o rechazar un refugio (Solo Administrador).</summary>
     [HttpPatch("{id}/verificar", Name = "VerificarRefugio")]
     [Authorize(Roles = "Administrador")]

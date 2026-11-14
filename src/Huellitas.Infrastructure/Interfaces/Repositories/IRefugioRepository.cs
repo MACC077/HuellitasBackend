@@ -13,4 +13,5 @@ public interface IRefugioRepository
     Task EliminarRequisitoAsync(int requisitoId);
     Task<(IEnumerable<Refugios> Items, int Total)> ObtenerRefugiosPublicosAsync(int pagina, int tamano);
     Task<Refugios?> ObtenerPerfilPublicoPorIdAsync(int refugioId);
+    Task<bool> ExisteNitAsync(string nit);
 }

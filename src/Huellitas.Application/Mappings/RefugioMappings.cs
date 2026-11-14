@@ -1,6 +1,7 @@
 ﻿using Huellitas.Application.DTOs.Refugios;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Huellitas.Application.DTOs.Mascotas;
+using System.Text.Json;
 
 namespace Huellitas.Application.Mappings;
 
@@ -14,7 +15,9 @@ public static class RefugioMappings
             Descripcion = r.Descripcion ?? string.Empty,
             Direccion = r.Direccion,
             Telefono = r.Telefono ?? string.Empty,
-            RedesSociales = r.RedesSociales ?? string.Empty,
+            RedesSociales = string.IsNullOrEmpty(r.RedesSociales)
+                ? null
+                : JsonSerializer.Deserialize<Dictionary<string, string>>(r.RedesSociales),
             EstadoVerificacion = r.EstadoVerificacion,
             Requisitos = r.RequisitosAdopcions?.Select(req => new RequisitoDTO
             {
@@ -71,6 +74,10 @@ public static class RefugioMappings
             //Reutilizamos el mapeo de mascotas que ya teníamos
             MascotasDisponibles = r.Mascota?.Select(m => m.ToResumenDto()).ToList() ?? new()
         };
+    }
 
+    public static string? SerializarRedesSociales(Dictionary<string, string>? redes)
+    {
+        return redes == null ? null : JsonSerializer.Serialize(redes);
     }
 }

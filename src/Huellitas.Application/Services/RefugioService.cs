@@ -3,14 +3,21 @@ using Huellitas.Application.Common.Exceptions;
 using Huellitas.Application.DTOs.Refugios;
 using Huellitas.Application.Interfaces.Services;
 using Huellitas.Application.Mappings;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
+using Huellitas.Infrastructure.Persistence.Entities;
 
 namespace Huellitas.Application.Services;
 
 public class RefugioService : IRefugioService
 {
     private readonly IRefugioRepository _repo;
-    public RefugioService(IRefugioRepository repo) => _repo = repo;
+    private readonly IUsuarioRepository _usuarioRepo;
+    public RefugioService(IRefugioRepository repo, IUsuarioRepository usuarioRepo)
+    {
+        _repo = repo;
+        _usuarioRepo = usuarioRepo;
+    }
 
     public async Task<PerfilRefugioDTO> ObtenerMiPerfilAsync(int usuarioId)
     {
@@ -27,7 +34,7 @@ public class RefugioService : IRefugioService
         refugio.Descripcion = dto.Descripcion;
         refugio.Direccion = dto.Direccion;
         refugio.Telefono = dto.Telefono;
-        refugio.RedesSociales = dto.RedesSociales;
+        refugio.RedesSociales = RefugioMappings.SerializarRedesSociales(dto.RedesSociales);
         refugio.FechaModificacion = DateTime.Now;
 
         await _repo.ActualizarAsync(refugio);
@@ -58,7 +65,7 @@ public class RefugioService : IRefugioService
 
         if (dto.Aprobado)
         {
-            refugio.EstadoVerificacion = 1; // Verificado
+            refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Verificado;
             refugio.FechaVerificacion = DateTime.Now;
             refugio.MotivoRechazo = null;
         }
@@ -67,11 +74,25 @@ public class RefugioService : IRefugioService
             if (string.IsNullOrWhiteSpace(dto.MotivoRechazo))
                 throw AppException.BadRequest("El motivo de rechazo es obligatorio.");
 
-            refugio.EstadoVerificacion = 2; // Rechazado
+            refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Rechazado; // Rechazado
             refugio.MotivoRechazo = dto.MotivoRechazo;
         }
 
         await _repo.ActualizarAsync(refugio);
+        
+        //Logica de Rechazo
+        var usuario = await _usuarioRepo.ObtenerPorRefugioIdAsync(refugioId);
+        if (usuario != null)
+        {
+            // 1. Desvincular el refugio del usuario
+            usuario.RefugioId = null;
+            // 2. Devolverle su rol a Adoptante
+            usuario.RolId = (int)RolUsuario.Adoptante;
+            usuario.FechaModificacion = DateTime.Now;
+
+            await _usuarioRepo.ActualizarAsync(usuario);
+        }
+
     }
 
     public async Task<PagedResult<RefugioResumenDTO>> ObtenerRefugiosPublicosAsync(int pagina, int tamano)
@@ -93,5 +114,39 @@ public class RefugioService : IRefugioService
             ?? throw AppException.NotFound("Refugio no encontrado o no está verificado.");
 
         return refugio.ToPublicoDto();
+    }
+
+    public async Task SolicitarRegistroRefugioAsync(int usuarioId, CrearRefugioDTO dto)
+    {
+        var usuario = await _usuarioRepo.ObtenerPorIdAsync(usuarioId)
+            ?? throw AppException.NotFound("Usuario no encontrado.");
+
+        if (usuario.RefugioId.HasValue)
+            throw AppException.Conflict("Ya tienes un refugio asociado a tu cuenta.");
+
+        if (await _repo.ExisteNitAsync(dto.Nit))
+            throw AppException.Conflict("Ya existe un refugio registrado con este NIT.");
+
+        var refugio = new Refugios
+        {
+            Nombre = dto.Nombre,
+            Nit = dto.Nit,
+            Direccion = dto.Direccion,
+            Telefono = dto.Telefono,
+            Correo = dto.Correo,
+            Encargado = dto.Encargado,
+            Descripcion = dto.Descripcion,
+            RedesSociales = RefugioMappings.SerializarRedesSociales(dto.RedesSociales), //Serialización JSON
+            EstadoVerificacion = (byte)EstadoVerificacionRefugio.Pendiente,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+
+        await _repo.InsertarAsync(refugio);
+
+        // Asociar el refugio al usuario y cambiar su rol a Refugio
+        usuario.RefugioId = refugio.RefugioId;
+        usuario.RolId = (int)RolUsuario.Refugio;
+        await _usuarioRepo.ActualizarAsync(usuario);
     }
 }
