@@ -402,4 +402,20 @@ public class AdopcionService : IAdopcionService
 
         await _solicitudRepo.ActualizarAsync(solicitud);
     }
+
+    public async Task<IEnumerable<VisitaResumenDTO>> ObtenerMisVisitasAsync(int usuarioId)
+    {
+        var visitas = await _solicitudRepo.ObtenerVisitasPorUsuarioAsync(usuarioId);
+        return visitas.Select(v => v.ToVisitaDto());
+    }
+
+    public async Task<IEnumerable<VisitaResumenDTO>> ObtenerVisitasRefugioAsync(int usuarioId)
+    {
+        // Obtenemos el RefugioId del usuario logueado
+        var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId)
+            ?? throw AppException.BadRequest("Usuario no asociado a un refugio.");
+
+        var visitas = await _solicitudRepo.ObtenerVisitasPorRefugioAsync(refugio.RefugioId);
+        return visitas.Select(v => v.ToVisitaDto());
+    }
 }

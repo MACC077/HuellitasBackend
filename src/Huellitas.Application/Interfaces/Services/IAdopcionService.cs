@@ -17,4 +17,6 @@ public interface IAdopcionService
     Task<byte[]> GenerarConstanciaPdfAsync(int solicitudId, int usuarioId);
     Task<DocumentoSoporteDTO> GuardarDocumentoAsync(int solicitudId, CrearDocumentoSoporteDTO dto, int usuarioId);
     Task<IEnumerable<DocumentoSoporteDTO>> ObtenerDocumentosAsync(int solicitudId, int usuarioId);
+    Task<IEnumerable<VisitaResumenDTO>> ObtenerMisVisitasAsync(int usuarioId);
+    Task<IEnumerable<VisitaResumenDTO>> ObtenerVisitasRefugioAsync(int usuarioId);
 }

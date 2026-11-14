@@ -57,4 +57,31 @@ public static class AdopcionMappings
             }
         };
     }
+
+    public static VisitaResumenDTO ToVisitaDto(this VisitasEntrevista v)
+    {
+        return new VisitaResumenDTO
+        {
+            VisitaId = v.VisitaId,
+            SolicitudId = v.SolicitudId,
+            MascotaNombre = v.Solicitud?.Mascota?.Nombre ?? "",
+            AdoptanteNombre = v.Solicitud?.Usuario?.Nombre ?? "",
+            RefugioNombre = v.Solicitud?.Mascota?.Refugio?.Nombre ?? "",
+            Fecha = v.Fecha,
+            Modalidad = v.Modalidad switch
+            {
+                0 => "Presencial",
+                1 => "Virtual",
+                _ => "Desconocida"
+            },
+            Estado = v.Estado switch
+            {
+                0 => "Propuesta",
+                1 => "Confirmada",
+                2 => "Reprogramada",
+                3 => "Realizada",
+                _ => "Desconocido"
+            }
+        };
+    }
 }

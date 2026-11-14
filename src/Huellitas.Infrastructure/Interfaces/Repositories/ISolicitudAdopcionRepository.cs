@@ -25,4 +25,6 @@ public interface ISolicitudAdopcionRepository
     Task<Adopciones?> ObtenerAdopcionConDetallesAsync(int solicitudId);
     Task InsertarDocumentoSoporteAsync(DocumentosSoporte documento);
     Task<IEnumerable<DocumentosSoporte>> ObtenerDocumentosPorSolicitudAsync(int solicitudId);
+    Task<IEnumerable<VisitasEntrevista>> ObtenerVisitasPorUsuarioAsync(int usuarioId);
+    Task<IEnumerable<VisitasEntrevista>> ObtenerVisitasPorRefugioAsync(int refugioId);
 }

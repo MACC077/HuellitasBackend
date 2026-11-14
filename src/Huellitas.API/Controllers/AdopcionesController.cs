@@ -146,6 +146,31 @@ public class AdopcionesController : ControllerBase
         return Ok(new { mensaje = dto.Aceptar ? "Visita confirmada." : "Fecha rechazada. El refugio propondrá una nueva." });
     }
 
+    /// <summary>
+    /// HU-ADO-05: Obtener las visitas agendadas para el adoptante autenticado.
+    /// </summary>
+    [HttpGet("mis-visitas", Name = "GetMisVisitas")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetMisVisitas()
+    {
+        var result = await _adopcionService.ObtenerMisVisitasAsync(User.GetUserId());
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// HU-ADO-05: Obtener las visitas agendadas por el refugio autenticado.
+    /// </summary>
+    [HttpGet("refugio/visitas", Name = "GetVisitasRefugio")]
+    [Authorize(Roles = "Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetVisitasRefugio()
+    {
+        var result = await _adopcionService.ObtenerVisitasRefugioAsync(User.GetUserId());
+        return Ok(result);
+    }
+
+
     // ═══════════════════════════════════════════════════════
     // HU-ADO-06: Soportes
     // ═══════════════════════════════════════════════════════

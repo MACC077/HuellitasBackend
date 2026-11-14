@@ -164,4 +164,30 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             .OrderByDescending(d => d.FechaCarga)
             .ToListAsync();
     }
+
+    public async Task<IEnumerable<VisitasEntrevista>> ObtenerVisitasPorUsuarioAsync(int usuarioId)
+    {
+        return await _context.VisitasEntrevista
+            .Include(v => v.Solicitud)
+            .ThenInclude(s => s.Mascota)
+            .ThenInclude(m => m.Refugio)
+            .Include(v => v.Solicitud)
+            .ThenInclude(s => s.Usuario)
+            .Where(v => v.Solicitud.UsuarioId == usuarioId && v.Activo)
+            .OrderByDescending(v => v.Fecha)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<VisitasEntrevista>> ObtenerVisitasPorRefugioAsync(int refugioId)
+    {
+        return await _context.VisitasEntrevista
+            .Include(v => v.Solicitud)
+            .ThenInclude(s => s.Mascota)
+            .ThenInclude(m => m.Refugio)
+            .Include(v => v.Solicitud)
+            .ThenInclude(s => s.Usuario)
+            .Where(v => v.Solicitud.Mascota.RefugioId == refugioId && v.Activo)
+            .OrderByDescending(v => v.Fecha)
+            .ToListAsync();
+    }
 }
