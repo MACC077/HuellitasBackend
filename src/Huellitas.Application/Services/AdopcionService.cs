@@ -132,8 +132,12 @@ public class AdopcionService : IAdopcionService
     {
         var solicitud = await ValidarPropietarioSolicitudAsync(solicitudId, usuarioId);
 
-        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada && solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision)
-            throw AppException.Conflict("Solo se pueden aprobar solicitudes que estén en estado Enviada o En Revisión.");
+        if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada &&
+        solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision &&
+        solicitud.Estado != (byte)EstadoSolicitudAdopcion.Entrevista)
+        {
+            throw AppException.Conflict("Solo se pueden aprobar solicitudes que estén en estado Enviada, En Revisión o Entrevista.");
+        }
 
         solicitud.Estado = (byte)EstadoSolicitudAdopcion.Aprobada;
         solicitud.Observaciones = dto.Observaciones;
