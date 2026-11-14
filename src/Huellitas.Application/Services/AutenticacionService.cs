@@ -221,7 +221,7 @@ public class AutenticacionService : IAutenticacionService
     public async Task<TokenResponseDTO> RefreshTokenAsync(string refreshToken)
     {
         // 1. Hashear y buscar
-        var hash = _hash.Hashear(refreshToken);
+        var hash = _tokenService.HashearToken(refreshToken);
         var tokenDb = await _refreshRepo.ObtenerPorHashAsync(hash);
 
         if (tokenDb == null)
@@ -245,7 +245,7 @@ public class AutenticacionService : IAutenticacionService
 
         // 5. Rotación: revocar el actual
         var nuevoRefreshToken = _tokenService.GenerarRefreshToken();
-        var nuevoHash = _hash.Hashear(nuevoRefreshToken);
+        var nuevoHash = _tokenService.HashearToken(nuevoRefreshToken);
 
         tokenDb.EstaRevocado = true;
         tokenDb.RevocadoEn = DateTime.Now;

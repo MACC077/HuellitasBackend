@@ -107,7 +107,6 @@ public class AdopcionesController : ControllerBase
         return Ok(new { mensaje = "Solicitud marcada en revisión." });
     }
 
-
     /// <summary>
     /// HU-ADO-04: Finalizar la adopción y cerrar las demás solicitudes automáticamente.
     /// </summary>
