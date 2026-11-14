@@ -53,6 +53,7 @@ public static class AdopcionMappings
                 4 => "Rechazada",
                 5 => "Finalizada",
                 6 => "Cancelada",
+                7 => "Cerrada",
                 _ => "Desconocido"
             }
         };
