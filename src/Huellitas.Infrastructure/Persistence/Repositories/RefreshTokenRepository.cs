@@ -27,6 +27,7 @@ public class RefreshTokenRepository : IRefreshTokenRepository
     {
         return await _context.RefreshTokens
         .Include(r => r.Usuario)
+            .ThenInclude(u => u.Rol) // Sin esto, al renovar el rol llega null y el token sale como "Adoptante".
         .FirstOrDefaultAsync(r => r.TokenHash == hash);
     }
         
