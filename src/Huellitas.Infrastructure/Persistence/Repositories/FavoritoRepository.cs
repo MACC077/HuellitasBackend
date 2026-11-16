@@ -30,17 +30,20 @@ public class FavoritoRepository : IFavoritoRepository
 
     public async Task<(IEnumerable<Mascotas> Items, int Total)> ObtenerMisFavoritosAsync(int usuarioId, int pagina, int tamano)
     {
-        // Hacemos un JOIN entre Favoritos y Mascotas para traer la info completa
-        var query = _context.Favoritos
-            .Where(f => f.UsuarioId == usuarioId && f.Activo)
-            .Select(f => f.Mascota)
+       
+        var query = _context.Mascotas
             .Where(m => m.Activo) // No mostrar mascotas dadas de baja
+            .Where(m => _context.Favoritos.Any(f =>
+                f.MascotaId == m.MascotaId &&
+                f.UsuarioId == usuarioId &&
+                f.Activo)) // Solo las que están en favoritos
             .Include(m => m.Especie)
             .Include(m => m.Raza)
             .Include(m => m.Multimedia)
             .AsQueryable();
 
         var total = await query.CountAsync();
+
         var items = await query
             .OrderByDescending(m => m.FechaCreacion)
             .Skip((pagina - 1) * tamano)
