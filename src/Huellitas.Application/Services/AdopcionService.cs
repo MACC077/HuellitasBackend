@@ -222,7 +222,7 @@ public class AdopcionService : IAdopcionService
         var bitacora = new Bitacoras
         {
             MascotaId = mascota.MascotaId,
-            Tipo = 3, // 3 = Adopción
+            Tipo = (byte)TipoBitacora.Adopcion,
             Descripcion = $"Adopción finalizada. Constancia: {nuevaAdopcion.CodigoConstancia}.",
             FechaCreacion = DateTime.Now
         };

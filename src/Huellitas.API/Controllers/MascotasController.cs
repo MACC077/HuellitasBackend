@@ -127,4 +127,29 @@ public class MascotasController : ControllerBase
         var result = await _mascotaService.ObtenerDetalleAsync(id);
         return Ok(result);
     }
+
+    /// <summary>
+    /// HU-MAS-04: Agregar un registro clínico a la mascota (Solo Refugio dueño).
+    /// </summary>
+    [HttpPost("{id}/historial", Name = "AgregarRegistroClinico")]
+    [Authorize(Roles = "Refugio,Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    public async Task<IActionResult> AgregarHistorial(int id, [FromBody] CrearRegistroClinicoDTO dto)
+    {
+        await _mascotaService.AgregarRegistroClinicoAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = "Registro clínico agregado correctamente." });
+    }
+
+    /// <summary>
+    /// HU-MAS-04: Obtener el historial clínico de una mascota (Paginado y Público).
+    /// </summary>
+    [HttpGet("{id}/historial", Name = "GetHistorialClinico")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHistorial(int id, [FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
+    {
+        var result = await _mascotaService.ObtenerHistorialClinicoAsync(id, pagina, tamano);
+        return Ok(result);
+    }
 }

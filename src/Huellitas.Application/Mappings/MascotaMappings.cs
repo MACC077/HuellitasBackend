@@ -1,4 +1,5 @@
 using Huellitas.Application.DTOs.Mascotas;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Persistence.Entities;
 
 namespace Huellitas.Application.Mappings;
@@ -100,6 +101,18 @@ public static class MascotaMappings
             RefugioTelefono = m.Refugio?.Telefono,
             // Ordenamos para que la foto principal aparezca de primera en el array
             Fotos = m.Multimedia?.OrderByDescending(f => f.EsPrincipal).Select(f => f.Archivo).ToList() ?? new()
+        };
+    }
+
+    public static RegistroClinicoDTO ToDto(this RegistrosClinico r)
+    {
+        return new RegistroClinicoDTO
+        {
+            RegistroClinicoId = r.RegistroClinicoId,
+            Tipo = ((TipoRegistroClinico)r.Tipo).ToString(),
+            Fecha = r.Fecha,
+            Descripcion = r.Descripcion ?? string.Empty,
+            SoporteVeterinario = r.SoporteVeterinario
         };
     }
 }

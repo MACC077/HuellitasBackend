@@ -13,11 +13,13 @@ public class MascotaService : IMascotaService
 {
     private readonly IMascotaRepository _mascotaRepo;
     private readonly IRefugioRepository _refugioRepo;
+    private readonly IRegistroClinicoRepository _registroClinicoRepo;
 
-    public MascotaService(IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo)
+    public MascotaService(IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo, IRegistroClinicoRepository registroClinicoRepo)
     {
         _mascotaRepo = mascotaRepo;
         _refugioRepo = refugioRepo;
+        _registroClinicoRepo = registroClinicoRepo;
     }
 
     public async Task<int> RegistrarAsync(CrearMascotaDTO dto, int usuarioId)
@@ -59,7 +61,7 @@ public class MascotaService : IMascotaService
         await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
-            Tipo = 0,
+            Tipo = (byte)TipoBitacora.Ingreso,
             Descripcion = "Mascota registrada en el sistema.",
             FechaCreacion = DateTime.Now
         });
@@ -115,7 +117,7 @@ public class MascotaService : IMascotaService
         await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
-            Tipo = 1, // Cambio de estado
+            Tipo = (byte)TipoBitacora.CambioEstado,
             Descripcion = $"Estado cambiado de {estadoAnterior} a {dto.NuevoEstado}. Motivo: {dto.Motivo ?? "N/A"}",
             FechaCreacion = DateTime.Now
         });
@@ -192,5 +194,53 @@ public class MascotaService : IMascotaService
             ?? throw AppException.NotFound("La mascota no existe o no está disponible.");
 
         return mascota.ToDetalleDto();
+    }
+
+    public async Task AgregarRegistroClinicoAsync(int mascotaId, CrearRegistroClinicoDTO dto, int usuarioId)
+    {
+        // Reutilizamos tu método existente (ValidarRefugioAsync)
+        var mascota = await ValidarRefugioAsync(mascotaId, usuarioId);
+
+        // Crear el registro usando el nombre correcto de la entidad
+        var registro = new RegistrosClinico
+        {
+            MascotaId = mascotaId,
+            Tipo = dto.Tipo,
+            Fecha = dto.Fecha,
+            Descripcion = dto.Descripcion,
+            SoporteVeterinario = dto.SoporteVeterinario,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+
+        await _registroClinicoRepo.InsertarAsync(registro);
+
+        // 3. Registrar en la bitácora
+        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        {
+            MascotaId = mascotaId,
+            Tipo = (byte)TipoBitacora.AtencionClinica,
+            Descripcion = $"Registro clínico agregado: {((TipoRegistroClinico)dto.Tipo).ToString()}",
+            FechaCreacion = DateTime.Now
+        });
+    }
+
+    public async Task<PagedResult<RegistroClinicoDTO>> ObtenerHistorialClinicoAsync(int mascotaId, int pagina, int tamano)
+    {
+        // Validamos que la mascota exista
+        _ = await _mascotaRepo.ObtenerPorIdAsync(mascotaId)
+            ?? throw AppException.NotFound("Mascota no encontrada.");
+
+        // Traemos los datos paginados desde el repositorio
+        var (items, total) = await _registroClinicoRepo.ObtenerPorMascotaAsync(mascotaId, pagina, tamano);
+
+        // Retornamos el PagedResult mapeado a DTOs
+        return new PagedResult<RegistroClinicoDTO>
+        {
+            Items = items.Select(r => r.ToDto()).ToList(),
+            Pagina = pagina,
+            TamanoPagina = tamano,
+            TotalRegistros = total
+        };
     }
 }
