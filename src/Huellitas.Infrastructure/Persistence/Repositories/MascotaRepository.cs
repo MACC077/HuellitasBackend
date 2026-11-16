@@ -1,4 +1,4 @@
-﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
@@ -50,7 +50,7 @@ public class MascotaRepository : IMascotaRepository
             .OrderByDescending(m => m.FechaCreacion);
 
         var total = await query.CountAsync();
-        var items = await query.Skip(Math.Max(0, (pagina - 1) * tamano)).Take(tamano).ToListAsync();
+        var items = await query.Skip((pagina - 1) * tamano).Take(tamano).ToListAsync();
         return (items, total);
     }
 
@@ -98,7 +98,7 @@ public class MascotaRepository : IMascotaRepository
 
         var items = await query
             .OrderByDescending(m => m.FechaCreacion)
-            .Skip(Math.Max(0, (pagina - 1) * tamano))
+            .Skip((pagina - 1) * tamano)
             .Take(tamano)
             .ToListAsync();
 

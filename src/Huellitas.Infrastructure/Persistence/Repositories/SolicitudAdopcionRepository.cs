@@ -1,4 +1,4 @@
-﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
@@ -52,7 +52,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip(Math.Max(0, (pagina - 1) * tamano))
+            .Skip((pagina - 1) * tamano)
             .Take(tamano)
             .ToListAsync();
 
@@ -69,7 +69,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip(Math.Max(0, (pagina - 1) * tamano))
+            .Skip((pagina - 1) * tamano)
             .Take(tamano)
             .ToListAsync();
 
@@ -105,7 +105,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
         Adopciones nuevaAdopcion,
         Bitacoras bitacora)
     {
-        //INICIO DE LA TRANSACCIÓN (Todo o nada)
+        //INICIO DE LA TRANSACCI�N (Todo o nada)
         using var transaction = await _context.Database.BeginTransactionAsync();
         try
         {

@@ -1,4 +1,4 @@
-ï»¿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
@@ -13,7 +13,7 @@ public class RefugioRepository : IRefugioRepository
 
     public async Task<Refugios?> ObtenerPorUsuarioIdAsync(int usuarioId)
     {
-        // El scaffold de EF Core genera la propiedad de navegaciÃ³n 'Refugio' en Usuarios
+        // El scaffold de EF Core genera la propiedad de navegación 'Refugio' en Usuarios
         // gracias a la FK RefugioId.
         var usuario = await _context.Usuarios
             .Include(u => u.Refugio)
@@ -64,7 +64,7 @@ public class RefugioRepository : IRefugioRepository
         if (req == null)
             return false;
 
-        req.Activo = false; // Borrado lÃ³gico
+        req.Activo = false; // Borrado lógico
         await _context.SaveChangesAsync();
         return true;
     }
@@ -78,7 +78,7 @@ public class RefugioRepository : IRefugioRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip(Math.Max(0, (pagina - 1) * tamano))
+            .Skip((pagina - 1) * tamano)
             .Take(tamano)
             .ToListAsync();
 

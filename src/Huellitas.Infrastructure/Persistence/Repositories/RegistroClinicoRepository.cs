@@ -1,4 +1,4 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -14,12 +14,12 @@ public class RegistroClinicoRepository : IRegistroClinicoRepository
     {
         var query = _context.RegistrosClinicos
             .Where(r => r.MascotaId == mascotaId && r.Activo)
-            .OrderByDescending(r => r.Fecha); // Los más recientes primero
+            .OrderByDescending(r => r.Fecha); // Los m�s recientes primero
 
         var total = await query.CountAsync();
 
         var items = await query
-            .Skip(Math.Max(0, (pagina - 1) * tamano))
+            .Skip((pagina - 1) * tamano)
             .Take(tamano)
             .ToListAsync();
 
