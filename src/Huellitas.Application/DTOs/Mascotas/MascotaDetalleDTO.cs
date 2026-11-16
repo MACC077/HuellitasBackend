@@ -19,4 +19,6 @@ public class MascotaDetalleDTO
     public string Refugio { get; set; } = string.Empty;
     public string? RefugioTelefono { get; set; }
     public List<string> Fotos { get; set; } = new();
+    /// <summary>Enlace del video de la mascota, si tiene uno.</summary>
+    public string? VideoUrl { get; set; }
 }

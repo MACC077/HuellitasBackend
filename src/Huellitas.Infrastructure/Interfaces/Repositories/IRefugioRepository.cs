@@ -10,7 +10,7 @@ public interface IRefugioRepository
     Task ActualizarAsync(Refugios refugio);
     Task<IEnumerable<RequisitosAdopcion>> ObtenerRequisitosPorRefugioAsync(int refugioId);
     Task InsertarRequisitoAsync(RequisitosAdopcion requisito);
-    Task EliminarRequisitoAsync(int requisitoId);
+    Task<bool> EliminarRequisitoAsync(int requisitoId, int refugioId);
     Task<(IEnumerable<Refugios> Items, int Total)> ObtenerRefugiosPublicosAsync(int pagina, int tamano);
     Task<Refugios?> ObtenerPerfilPublicoPorIdAsync(int refugioId);
     Task<bool> ExisteNitAsync(string nit);

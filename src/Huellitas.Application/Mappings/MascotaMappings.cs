@@ -1,3 +1,4 @@
+using Huellitas.Application.Common;
 using Huellitas.Application.DTOs.Mascotas;
 using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Persistence.Entities;
@@ -26,7 +27,7 @@ public static class MascotaMappings
                 2 => "Adoptada",
                 _ => "No Disponible"
             },
-            FotoPrincipal = m.Multimedia?.FirstOrDefault(f => f.EsPrincipal)?.Archivo,
+            FotoPrincipal = m.Multimedia?.FirstOrDefault(f => f.Tipo == MultimediaHelper.TipoFoto && f.EsPrincipal)?.Archivo,
             FechaCreacion = m.FechaCreacion
         };
     }
@@ -99,8 +100,17 @@ public static class MascotaMappings
             RefugioId = m.RefugioId,
             Refugio = m.Refugio?.Nombre ?? "Refugio no asignado",
             RefugioTelefono = m.Refugio?.Telefono,
-            // Ordenamos para que la foto principal aparezca de primera en el array
-            Fotos = m.Multimedia?.OrderByDescending(f => f.EsPrincipal).Select(f => f.Archivo).ToList() ?? new()
+            // Las fotos van primero y la principal al inicio; el video se expone aparte.
+            Fotos = m.Multimedia?
+                .Where(f => f.Tipo == MultimediaHelper.TipoFoto)
+                .OrderByDescending(f => f.EsPrincipal)
+                .Select(f => f.Archivo)
+                .ToList() ?? new(),
+            VideoUrl = m.Multimedia?
+                .Where(f => f.Tipo == MultimediaHelper.TipoVideo)
+                .OrderByDescending(f => f.FechaCarga)
+                .Select(f => f.Archivo)
+                .FirstOrDefault()
         };
     }
 

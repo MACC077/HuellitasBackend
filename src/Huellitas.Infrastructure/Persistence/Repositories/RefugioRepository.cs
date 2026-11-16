@@ -56,14 +56,17 @@ public class RefugioRepository : IRefugioRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task EliminarRequisitoAsync(int requisitoId)
+    public async Task<bool> EliminarRequisitoAsync(int requisitoId, int refugioId)
     {
-        var req = await _context.RequisitosAdopcions.FindAsync(requisitoId);
-        if (req != null)
-        {
-            req.Activo = false; // Borrado lógico
-            await _context.SaveChangesAsync();
-        }
+        var req = await _context.RequisitosAdopcions
+            .FirstOrDefaultAsync(r => r.RequisitoId == requisitoId && r.RefugioId == refugioId);
+
+        if (req == null)
+            return false;
+
+        req.Activo = false; // Borrado lógico
+        await _context.SaveChangesAsync();
+        return true;
     }
 
     public async Task<(IEnumerable<Refugios> Items, int Total)> ObtenerRefugiosPublicosAsync(int pagina, int tamano)
@@ -75,7 +78,7 @@ public class RefugioRepository : IRefugioRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip((pagina - 1) * tamano)
+            .Skip(Math.Max(0, (pagina - 1) * tamano))
             .Take(tamano)
             .ToListAsync();
 

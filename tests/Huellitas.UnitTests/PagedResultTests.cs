@@ -10,6 +10,8 @@ public class PagedResultTests
     [InlineData(10, 10, 1)]
     [InlineData(11, 10, 2)]
     [InlineData(25, 5, 5)]
+    [InlineData(3, 0, 0)]
+    [InlineData(3, -10, 0)]
     public void TotalPaginas_SeCalculaCorrectamente(int totalRegistros, int tamanoPagina, int esperado)
     {
         var resultado = new PagedResult<int>

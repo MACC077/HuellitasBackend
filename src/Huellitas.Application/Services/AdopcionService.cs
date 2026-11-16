@@ -101,29 +101,32 @@ public class AdopcionService : IAdopcionService
 
     public async Task<PagedResult<SolicitudResumenDTO>> ObtenerMisSolicitudesAsync(int usuarioId, int pagina, int tamano)
     {
-        var (items, total) = await _solicitudRepo.ObtenerPorAdoptanteAsync(usuarioId, pagina, tamano);
+        var (paginaNormalizada, tamanoNormalizado) = Paginacion.Normalizar(pagina, tamano);
+        var (items, total) = await _solicitudRepo.ObtenerPorAdoptanteAsync(usuarioId, paginaNormalizada, tamanoNormalizado);
 
         return new PagedResult<SolicitudResumenDTO>
         {
             Items = items.Select(s => s.ToResumenDto()).ToList(),
-            Pagina = pagina,
-            TamanoPagina = tamano,
+            Pagina = paginaNormalizada,
+            TamanoPagina = tamanoNormalizado,
             TotalRegistros = total
         };
     }
 
     public async Task<PagedResult<SolicitudResumenDTO>> ObtenerBandejaRefugioAsync(int usuarioId, int pagina, int tamano)
     {
+        var (paginaNormalizada, tamanoNormalizado) = Paginacion.Normalizar(pagina, tamano);
+
         var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId)
             ?? throw AppException.BadRequest("Usuario no asociado a un refugio.");
 
-        var (items, total) = await _solicitudRepo.ObtenerPorRefugioAsync(refugio.RefugioId, pagina, tamano);
+        var (items, total) = await _solicitudRepo.ObtenerPorRefugioAsync(refugio.RefugioId, paginaNormalizada, tamanoNormalizado);
 
         return new PagedResult<SolicitudResumenDTO>
         {
             Items = items.Select(s => s.ToResumenDto()).ToList(),
-            Pagina = pagina,
-            TamanoPagina = tamano,
+            Pagina = paginaNormalizada,
+            TamanoPagina = tamanoNormalizado,
             TotalRegistros = total
         };
     }

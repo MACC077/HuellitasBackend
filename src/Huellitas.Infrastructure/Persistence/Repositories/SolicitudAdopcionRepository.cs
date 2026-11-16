@@ -17,6 +17,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             .AnyAsync(s => s.UsuarioId == usuarioId
                         && s.MascotaId == mascotaId
                         && s.Activo
+                        && s.Estado != (byte)EstadoSolicitudAdopcion.Rechazada
                         && s.Estado != (byte)EstadoSolicitudAdopcion.Finalizada
                         && s.Estado != (byte)EstadoSolicitudAdopcion.Cancelada
                         && s.Estado != (byte)EstadoSolicitudAdopcion.Cerrada);
@@ -51,7 +52,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip((pagina - 1) * tamano)
+            .Skip(Math.Max(0, (pagina - 1) * tamano))
             .Take(tamano)
             .ToListAsync();
 
@@ -68,7 +69,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
 
         var total = await query.CountAsync();
         var items = await query
-            .Skip((pagina - 1) * tamano)
+            .Skip(Math.Max(0, (pagina - 1) * tamano))
             .Take(tamano)
             .ToListAsync();
 
@@ -91,7 +92,9 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
     public async Task<List<SolicitudesAdopcion>> ObtenerSolicitudesActivasPorMascotaAsync(int mascotaId)
     {
         return await _context.SolicitudesAdopcion
-            .Where(s => s.MascotaId == mascotaId && s.Activo && s.Estado < (byte)EstadoSolicitudAdopcion.Finalizada)
+            .Where(s => s.MascotaId == mascotaId
+                     && s.Activo
+                     && s.Estado <= (byte)EstadoSolicitudAdopcion.Aprobada)
             .ToListAsync();
     }
 

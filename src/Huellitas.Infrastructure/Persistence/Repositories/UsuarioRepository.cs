@@ -50,10 +50,9 @@ public class UsuarioRepository : IUsuarioRepository
         return rol?.RolId ?? 0;
     }
 
-    public async Task<int> ObtenerPoliticaActivaIdAsync()
+    public async Task<PoliticasDato?> ObtenerPoliticaActivaAsync()
     {
-        var politica = await _context.PoliticasDatos.FirstOrDefaultAsync(p => p.Activo);
-        return politica?.PoliticaId ?? 0;
+        return await _context.PoliticasDatos.FirstOrDefaultAsync(p => p.Activo);
     }
 
     public async Task InsertarTokenAsync(TokensSeguridad token)

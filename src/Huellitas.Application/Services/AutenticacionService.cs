@@ -38,6 +38,9 @@ public class AutenticacionService : IAutenticacionService
 
     public async Task<int> RegistrarAsync(CrearUsuarioDTO dto)
     {
+        if (!dto.AceptaPolitica)
+            throw AppException.BadRequest("Debe aceptar la política de tratamiento de datos para registrarse.");
+
         if (await _repo.ExisteCorreoAsync(dto.Correo))
             throw AppException.Conflict("El correo ya está registrado.");
 
@@ -51,8 +54,8 @@ public class AutenticacionService : IAutenticacionService
             throw AppException.BadRequest("Configuración del sistema incompleta: no existe el rol Adoptante.");
 
         // Validamos la política antes de crear el usuario para no dejar registros huérfanos.
-        var politicaId = await _repo.ObtenerPoliticaActivaIdAsync();
-        if (politicaId == 0)
+        var politica = await _repo.ObtenerPoliticaActivaAsync();
+        if (politica == null)
             throw AppException.BadRequest("Configuración del sistema incompleta: no hay política de datos activa.");
 
         await _repo.InsertarAsync(usuario);
@@ -60,8 +63,8 @@ public class AutenticacionService : IAutenticacionService
         await _repo.InsertarConsentimientoAsync(new ConsentimientosDatos
         {
             UsuarioId = usuario.UsuarioId,
-            PoliticaId = politicaId,
-            VersionAceptada = "1.0", //No debe estar quemado debe acualizarse, con lo que trae la BD, pero por ahora lo dejamos así
+            PoliticaId = politica.PoliticaId,
+            VersionAceptada = politica.Version,
             FechaAceptacion = DateTime.Now,
             Activo = true
         });

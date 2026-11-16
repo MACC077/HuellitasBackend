@@ -13,6 +13,8 @@ public class CrearMascotaDTO
     public bool Esterilizada { get; set; }
     public byte Procedencia { get; set; } // 0=Rescate, 1=Entrega, 2=Reporte
     public List<string> FotosUrls { get; set; } = new();
+    /// <summary>Enlace del video (YouTube, Vimeo, etc.). Opcional.</summary>
+    public string? VideoUrl { get; set; }
 }
 
 public class ActualizarMascotaDTO
@@ -26,6 +28,8 @@ public class ActualizarMascotaDTO
     public string? Descripcion { get; set; }
     public bool Esterilizada { get; set; }
     public List<string> FotosUrls { get; set; } = new(); // Opcional, si se envían, se reemplazan
+    /// <summary>Enlace del video (YouTube, Vimeo, etc.). Opcional.</summary>
+    public string? VideoUrl { get; set; }
 }
 
 public class CambiarEstadoMascotaDTO

@@ -19,7 +19,7 @@ public class RegistroClinicoRepository : IRegistroClinicoRepository
         var total = await query.CountAsync();
 
         var items = await query
-            .Skip((pagina - 1) * tamano)
+            .Skip(Math.Max(0, (pagina - 1) * tamano))
             .Take(tamano)
             .ToListAsync();
 

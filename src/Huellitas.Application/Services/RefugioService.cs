@@ -54,8 +54,9 @@ public class RefugioService : IRefugioService
         var refugio = await _repo.ObtenerPorUsuarioIdAsync(usuarioId)
             ?? throw AppException.NotFound("No tienes un refugio asociado.");
 
-        // Aquí idealmente validarías que el requisito pertenece al refugio antes de borrar
-        await _repo.EliminarRequisitoAsync(requisitoId);
+        var eliminado = await _repo.EliminarRequisitoAsync(requisitoId, refugio.RefugioId);
+        if (!eliminado)
+            throw AppException.NotFound("Requisito no encontrado.");
     }
 
     public async Task VerificarRefugioAsync(int refugioId, VerificarRefugioDTO dto)
@@ -97,13 +98,14 @@ public class RefugioService : IRefugioService
 
     public async Task<PagedResult<RefugioResumenDTO>> ObtenerRefugiosPublicosAsync(int pagina, int tamano)
     {
-        var (items, total) = await _repo.ObtenerRefugiosPublicosAsync(pagina, tamano);
+        var (paginaNormalizada, tamanoNormalizado) = Paginacion.Normalizar(pagina, tamano);
+        var (items, total) = await _repo.ObtenerRefugiosPublicosAsync(paginaNormalizada, tamanoNormalizado);
 
         return new PagedResult<RefugioResumenDTO>
         {
             Items = items.Select(r => r.ToResumenDto()).ToList(),
-            Pagina = pagina,
-            TamanoPagina = tamano,
+            Pagina = paginaNormalizada,
+            TamanoPagina = tamanoNormalizado,
             TotalRegistros = total
         };
     }

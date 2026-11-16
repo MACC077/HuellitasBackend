@@ -34,11 +34,9 @@ public class MascotaRepository : IMascotaRepository
     public async Task<bool> TieneSolicitudesActivasAsync(int mascotaId)
     {
         return await _context.SolicitudesAdopcion
-            .AnyAsync(s => s.MascotaId == mascotaId 
-                        && s.Activo 
-                        && s.Estado != 5 
-                        && s.Estado != 6 
-                        && s.Estado != 7);
+            .AnyAsync(s => s.MascotaId == mascotaId
+                        && s.Activo
+                        && s.Estado <= (byte)EstadoSolicitudAdopcion.Aprobada);
     }
         
 
@@ -52,7 +50,7 @@ public class MascotaRepository : IMascotaRepository
             .OrderByDescending(m => m.FechaCreacion);
 
         var total = await query.CountAsync();
-        var items = await query.Skip((pagina - 1) * tamano).Take(tamano).ToListAsync();
+        var items = await query.Skip(Math.Max(0, (pagina - 1) * tamano)).Take(tamano).ToListAsync();
         return (items, total);
     }
 
@@ -100,7 +98,7 @@ public class MascotaRepository : IMascotaRepository
 
         var items = await query
             .OrderByDescending(m => m.FechaCreacion)
-            .Skip((pagina - 1) * tamano)
+            .Skip(Math.Max(0, (pagina - 1) * tamano))
             .Take(tamano)
             .ToListAsync();
 

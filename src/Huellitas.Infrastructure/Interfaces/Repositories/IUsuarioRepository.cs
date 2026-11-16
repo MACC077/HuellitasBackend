@@ -11,7 +11,7 @@ public interface IUsuarioRepository
     Task<Usuarios?> ObtenerPorIdAsync(int id);
     Task ActualizarAsync(Usuarios usuario);
     Task<int> ObtenerRolIdPorNombreAsync(string nombreRol);
-    Task<int> ObtenerPoliticaActivaIdAsync();
+    Task<PoliticasDato?> ObtenerPoliticaActivaAsync();
     Task InsertarTokenAsync(TokensSeguridad token);
     Task InsertarConsentimientoAsync(ConsentimientosDatos consentimiento);
     Task<TokensSeguridad?> ObtenerTokenPorValorAsync(string valor);

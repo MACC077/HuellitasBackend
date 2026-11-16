@@ -42,21 +42,9 @@ public class MascotaService : IMascotaService
 
         await _mascotaRepo.InsertarAsync(mascota);
 
-        // Insertar fotos
-        bool esPrimera = true;
-        foreach (var url in dto.FotosUrls)
-        {
-            await _mascotaRepo.InsertarMultimediaAsync(new Multimedia
-            {
-                MascotaId = mascota.MascotaId,
-                Tipo = 0,
-                Archivo = url,
-                EsPrincipal = esPrimera,
-                FechaCarga = DateTime.Now,
-                Activo = true
-            });
-            esPrimera = false;
-        }
+        // Insertar fotos y, si existe, el enlace del video
+        var (fotos, videos) = SepararMultimedia(dto.FotosUrls, dto.VideoUrl);
+        await GuardarMultimediaAsync(mascota.MascotaId, fotos, videos);
 
         await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
         {
@@ -79,24 +67,62 @@ public class MascotaService : IMascotaService
 
         await _mascotaRepo.ActualizarAsync(mascota);
 
-        // Si envían nuevas fotos, reemplazamos las anteriores
-        if (dto.FotosUrls != null && dto.FotosUrls.Any())
+        // Si envían nuevas fotos o video, reemplazamos la multimedia anterior
+        var (fotos, videos) = SepararMultimedia(dto.FotosUrls, dto.VideoUrl);
+        if (fotos.Count > 0 || videos.Count > 0)
         {
             await _mascotaRepo.EliminarMultimediaAsync(mascotaId);
-            bool esPrimera = true;
-            foreach (var url in dto.FotosUrls)
+            await GuardarMultimediaAsync(mascotaId, fotos, videos);
+        }
+    }
+
+    /// <summary>Separa los enlaces recibidos en fotos y videos.</summary>
+    private static (List<string> Fotos, List<string> Videos) SepararMultimedia(
+        IEnumerable<string>? urls, string? videoUrl)
+    {
+        var lista = urls?.Where(u => !string.IsNullOrWhiteSpace(u)).ToList() ?? new();
+        var fotos = lista.Where(u => !MultimediaHelper.EsVideo(u)).ToList();
+        var videos = lista.Where(MultimediaHelper.EsVideo).ToList();
+
+        if (!string.IsNullOrWhiteSpace(videoUrl))
+        {
+            var video = videoUrl.Trim();
+            if (!videos.Contains(video))
+                videos.Add(video);
+        }
+
+        return (fotos, videos);
+    }
+
+    /// <summary>Guarda las fotos y el enlace de video de una mascota.</summary>
+    private async Task GuardarMultimediaAsync(int mascotaId, IEnumerable<string> fotos, IEnumerable<string> videos)
+    {
+        var esPrimera = true;
+        foreach (var url in fotos)
+        {
+            await _mascotaRepo.InsertarMultimediaAsync(new Multimedia
             {
-                await _mascotaRepo.InsertarMultimediaAsync(new Multimedia
-                {
-                    MascotaId = mascotaId,
-                    Tipo = 0,
-                    Archivo = url,
-                    EsPrincipal = esPrimera,
-                    FechaCarga = DateTime.Now,
-                    Activo = true
-                });
-                esPrimera = false;
-            }
+                MascotaId = mascotaId,
+                Tipo = MultimediaHelper.TipoFoto,
+                Archivo = url,
+                EsPrincipal = esPrimera,
+                FechaCarga = DateTime.Now,
+                Activo = true
+            });
+            esPrimera = false;
+        }
+
+        foreach (var url in videos)
+        {
+            await _mascotaRepo.InsertarMultimediaAsync(new Multimedia
+            {
+                MascotaId = mascotaId,
+                Tipo = MultimediaHelper.TipoVideo,
+                Archivo = url,
+                EsPrincipal = false,
+                FechaCarga = DateTime.Now,
+                Activo = true
+            });
         }
     }
 
@@ -140,16 +166,18 @@ public class MascotaService : IMascotaService
 
     public async Task<PagedResult<MascotaResumenDTO>> ObtenerMisMascotasAsync(int usuarioId, int pagina, int tamano)
     {
+        var (paginaNormalizada, tamanoNormalizado) = Paginacion.Normalizar(pagina, tamano);
+
         var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId)
             ?? throw AppException.BadRequest("El usuario no está asociado a un refugio.");
 
-        var (items, total) = await _mascotaRepo.ObtenerMisMascotasAsync(refugio.RefugioId, pagina, tamano);
+        var (items, total) = await _mascotaRepo.ObtenerMisMascotasAsync(refugio.RefugioId, paginaNormalizada, tamanoNormalizado);
 
         return new PagedResult<MascotaResumenDTO>
         {
             Items = items.ToResumenDtoList().ToList(),
-            Pagina = pagina,
-            TamanoPagina = tamano,
+            Pagina = paginaNormalizada,
+            TamanoPagina = tamanoNormalizado,
             TotalRegistros = total
         };
     }
@@ -171,10 +199,12 @@ public class MascotaService : IMascotaService
 
     public async Task<PagedResult<MascotaResumenDTO>> ObtenerCatalogoAsync(FiltroMascotaDTO filtro)
     {
+        var (pagina, tamano) = Paginacion.Normalizar(filtro.Pagina, filtro.TamanoPagina);
+
         // El servicio extrae los valores del DTO y se los pasa al repo
         var (items, total) = await _mascotaRepo.ObtenerCatalogoPublicoAsync(
-            filtro.Pagina,
-            filtro.TamanoPagina,
+            pagina,
+            tamano,
             filtro.EspecieId,
             filtro.TamanoId,
             filtro.Sexo);
@@ -182,8 +212,8 @@ public class MascotaService : IMascotaService
         return new PagedResult<MascotaResumenDTO>
         {
             Items = items.ToResumenDtoList().ToList(),
-            Pagina = filtro.Pagina,
-            TamanoPagina = filtro.TamanoPagina,
+            Pagina = pagina,
+            TamanoPagina = tamano,
             TotalRegistros = total
         };
     }
@@ -227,19 +257,21 @@ public class MascotaService : IMascotaService
 
     public async Task<PagedResult<RegistroClinicoDTO>> ObtenerHistorialClinicoAsync(int mascotaId, int pagina, int tamano)
     {
+        var (paginaNormalizada, tamanoNormalizado) = Paginacion.Normalizar(pagina, tamano);
+
         // Validamos que la mascota exista
         _ = await _mascotaRepo.ObtenerPorIdAsync(mascotaId)
             ?? throw AppException.NotFound("Mascota no encontrada.");
 
         // Traemos los datos paginados desde el repositorio
-        var (items, total) = await _registroClinicoRepo.ObtenerPorMascotaAsync(mascotaId, pagina, tamano);
+        var (items, total) = await _registroClinicoRepo.ObtenerPorMascotaAsync(mascotaId, paginaNormalizada, tamanoNormalizado);
 
         // Retornamos el PagedResult mapeado a DTOs
         return new PagedResult<RegistroClinicoDTO>
         {
             Items = items.Select(r => r.ToDto()).ToList(),
-            Pagina = pagina,
-            TamanoPagina = tamano,
+            Pagina = paginaNormalizada,
+            TamanoPagina = tamanoNormalizado,
             TotalRegistros = total
         };
     }
