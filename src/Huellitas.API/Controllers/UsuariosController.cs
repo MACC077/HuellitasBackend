@@ -34,8 +34,7 @@ public class UsuariosController : ControllerBase
         var usuarioId = await _auth.RegistrarAsync(dto);
         var response = new { mensaje = "Usuario registrado. Revisa tu correo.", usuarioId };
 
-        // Devuelve 201 Created con la cabecera 'Location' apuntando al recurso creado.
-        return CreatedAtAction(nameof(Registrar), new { id = usuarioId }, response);
+        return StatusCode(StatusCodes.Status201Created, response);
     }
 
     /// <summary>

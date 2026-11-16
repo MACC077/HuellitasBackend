@@ -29,7 +29,7 @@ public class PdfService : IPdfService
                 page.Size(PageSizes.A4);
                 page.Margin(2, Unit.Centimetre);
                 page.PageColor(Colors.White);
-                page.DefaultTextStyle(x => x.FontSize(12).FontFamily(Fonts.Arial));
+                page.DefaultTextStyle(x => x.FontSize(12).FontFamily("Arial"));
 
                 // Encabezado
                 page.Header().Element(ComposeHeader);

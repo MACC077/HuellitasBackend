@@ -41,6 +41,34 @@ builder.Services.AddProblemDetails();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
+// CORS
+// En desarrollo se permite cualquier origen para no bloquear el front local ni los túneles de Visual Studio.
+// En producción solo se aceptan los orígenes definidos en Cors:AllowedOrigins.
+var origenesPermitidos = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .GetChildren()
+    .Select(c => c.Value)
+    .Where(v => !string.IsNullOrWhiteSpace(v))
+    .ToArray();
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAnyOrigin", policy => policy
+        .AllowAnyOrigin()
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+
+    options.AddPolicy("AllowSpecificOrigins", policy =>
+    {
+        if (origenesPermitidos.Length > 0)
+            policy.WithOrigins(origenesPermitidos!);
+        else
+            policy.SetIsOriginAllowed(_ => false);
+
+        policy.AllowAnyHeader().AllowAnyMethod();
+    });
+});
+
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
@@ -91,11 +119,8 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-    //Habilitar CORS para desarrollo
-    app.UseCors(policy => policy
-       .AllowAnyOrigin()
-       .AllowAnyHeader()
-       .AllowAnyMethod());
+    // En desarrollo se acepta cualquier origen (front local y túneles de VS).
+    app.UseCors("AllowAnyOrigin");
 }
 else
 {
