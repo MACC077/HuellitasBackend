@@ -50,11 +50,12 @@ public class AutenticacionService : IAutenticacionService
         if (usuario.RolId == 0)
             throw AppException.BadRequest("Configuración del sistema incompleta: no existe el rol Adoptante.");
 
-        await _repo.InsertarAsync(usuario);
-
+        // Validamos la política antes de crear el usuario para no dejar registros huérfanos.
         var politicaId = await _repo.ObtenerPoliticaActivaIdAsync();
         if (politicaId == 0)
             throw AppException.BadRequest("Configuración del sistema incompleta: no hay política de datos activa.");
+
+        await _repo.InsertarAsync(usuario);
 
         await _repo.InsertarConsentimientoAsync(new ConsentimientosDatos
         {
