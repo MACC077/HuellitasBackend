@@ -243,4 +243,21 @@ public class MascotaService : IMascotaService
             TotalRegistros = total
         };
     }
+
+    public async Task<CompartirMascotaDTO> ObtenerDatosParaCompartirAsync(int mascotaId, string baseUrlFrontend)
+    {
+        var mascota = await _mascotaRepo.ObtenerDetallePublicoAsync(mascotaId)
+            ?? throw AppException.NotFound("La mascota no existe o no está disponible.");
+
+        var fotoPrincipal = mascota.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo
+            ?? "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"; // Fallback
+
+        return new CompartirMascotaDTO
+        {
+            Titulo = $"¡Conoce a {mascota.Nombre} en Huellitas!",
+            Descripcion = $"Es un(a) {mascota.Especie?.Nombre} {(string.IsNullOrEmpty(mascota.Raza?.Nombre) ? "" : $"de raza {mascota.Raza.Nombre}")} que busca un hogar. ¡Ayúdanos a encontrar a su familia!",
+            ImagenUrl = fotoPrincipal,
+            UrlFicha = $"{baseUrlFrontend.TrimEnd('/')}/mascotas/{mascota.MascotaId}" // URL que abrirá el frontend
+        };
+    }
 }

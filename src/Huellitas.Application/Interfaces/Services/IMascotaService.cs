@@ -14,4 +14,5 @@ public interface IMascotaService
     Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId);
     Task AgregarRegistroClinicoAsync(int mascotaId, CrearRegistroClinicoDTO dto, int usuarioId);
     Task<PagedResult<RegistroClinicoDTO>> ObtenerHistorialClinicoAsync(int mascotaId, int pagina, int tamano);
+    Task<CompartirMascotaDTO> ObtenerDatosParaCompartirAsync(int mascotaId, string baseUrlFrontend);
 }

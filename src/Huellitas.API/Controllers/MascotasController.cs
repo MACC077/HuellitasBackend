@@ -152,4 +152,19 @@ public class MascotasController : ControllerBase
         var result = await _mascotaService.ObtenerHistorialClinicoAsync(id, pagina, tamano);
         return Ok(result);
     }
+
+    /// <summary>
+    /// HU-MAS-08: Obtener los datos formateados para compartir una mascota en redes sociales.
+    /// </summary>
+    [HttpGet("{id}/compartir", Name = "CompartirMascota")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Compartir(int id, [FromServices] IConfiguration config)
+    {
+        // Leemos la URL del frontend desde appsettings.json (o usamos localhost por defecto)
+        var baseUrlFrontend = config["App:FrontendUrl"] ?? "http://localhost:7296";
+
+        var result = await _mascotaService.ObtenerDatosParaCompartirAsync(id, baseUrlFrontend);
+        return Ok(result);
+    }
 }
