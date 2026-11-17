@@ -8,7 +8,6 @@ namespace Huellitas.API.Controllers;
 
 [ApiController]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = "Refugio,Administrador")]
 public class MascotasController : ControllerBase
 {
     private readonly IMascotaService _mascotaService;
@@ -22,6 +21,7 @@ public class MascotasController : ControllerBase
     /// <response code="400">Datos inválidos o el usuario no es un refugio.</response>
     /// <response code="403">El refugio no está verificado.</response>
     [HttpPost(Name = "RegistrarMascota")]
+    [Authorize(Roles = "Refugio,Administrador")]
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -39,6 +39,7 @@ public class MascotasController : ControllerBase
     /// <response code="403">El usuario no es dueño de la mascota.</response>
     /// <response code="404">Mascota no encontrada.</response>
     [HttpPut("{id}", Name = "ActualizarMascota")]
+    [Authorize(Roles = "Refugio,Administrador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -55,6 +56,7 @@ public class MascotasController : ControllerBase
     /// <response code="200">Estado actualizado correctamente.</response>
     /// <response code="400">Motivo faltante al intentar pasar a "No Disponible".</response>
     [HttpPatch("{id}/estado", Name = "CambiarEstadoMascota")]
+    [Authorize(Roles = "Refugio,Administrador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> CambiarEstado(int id, [FromBody] CambiarEstadoMascotaDTO dto)
@@ -71,6 +73,7 @@ public class MascotasController : ControllerBase
     /// <response code="200">Mascota dada de baja.</response>
     /// <response code="409">No se puede dar de baja porque tiene solicitudes activas.</response>
     [HttpDelete("{id}", Name = "DarDeBajaMascota")]
+    [Authorize(Roles = "Refugio,Administrador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> DarDeBaja(int id, [FromQuery] string motivo)
@@ -88,6 +91,7 @@ public class MascotasController : ControllerBase
     /// </remarks>
     /// <response code="200">Lista paginada de mascotas.</response>
     [HttpGet("refugio/inventario", Name = "GetInventarioRefugio")]
+    [Authorize(Roles = "Refugio,Administrador")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetInventarioRefugio([FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
     {
@@ -165,6 +169,22 @@ public class MascotasController : ControllerBase
         var baseUrlFrontend = config["App:FrontendUrl"] ?? "http://localhost:7296";
 
         var result = await _mascotaService.ObtenerDatosParaCompartirAsync(id, baseUrlFrontend);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// HU-MAS-06: Obtener recomendaciones de mascotas personalizadas para el adoptante.
+    /// </summary>
+    /// <remarks>
+    /// Retorna el Top 10 de mascotas ordenadas por compatibilidad (0-100) con su perfil.
+    /// </remarks>
+    [HttpGet("recomendaciones", Name = "GetRecomendacionesMascotas")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetRecomendaciones([FromServices] IMatchService matchService)
+    {
+        var result = await matchService.ObtenerRecomendacionesAsync(User.GetUserId());
         return Ok(result);
     }
 }

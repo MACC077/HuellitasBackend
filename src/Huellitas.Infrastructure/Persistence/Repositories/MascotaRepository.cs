@@ -119,4 +119,18 @@ public class MascotaRepository : IMascotaRepository
                                    (m.Estado == (byte)EstadoMascota.Disponible ||
                                     m.Estado == (byte)EstadoMascota.EnProceso));
     }
+
+    public async Task<IEnumerable<Mascotas>> ObtenerMuestraMascotasDisponiblesAsync(int limiteMuestra = 50)
+    {
+        return await _context.Mascotas
+            .Include(m => m.Especie)
+            .Include(m => m.Raza)
+            .Include(m => m.Tamano)
+            .Include(m => m.Temperamentos)
+            .Include(m => m.Multimedia)
+            .Where(m => m.Activo && (m.Estado == (byte)EstadoMascota.Disponible || m.Estado == (byte)EstadoMascota.EnProceso))
+            .OrderBy(m => EF.Functions.Random()) // Muestreo aleatorio en SQL Server (ORDER BY NEWID())
+            .Take(limiteMuestra)
+            .ToListAsync();
+    }
 }

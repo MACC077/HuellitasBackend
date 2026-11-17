@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddScoped<IArchivoService, ArchivoService>();
         services.AddScoped<IRefugioService, RefugioService>();
         services.AddScoped<IFavoritoService, FavoritoService>();
+        services.AddScoped<IMatchService, MatchService>();
         return services;
     }
 }
