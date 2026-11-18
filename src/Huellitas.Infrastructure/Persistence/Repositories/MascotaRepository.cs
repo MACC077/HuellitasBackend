@@ -109,15 +109,14 @@ public class MascotaRepository : IMascotaRepository
 
     public async Task<Mascotas?> ObtenerDetallePublicoAsync(int mascotaId)
     {
+        
         return await _context.Mascotas
          .Include(m => m.Especie)
          .Include(m => m.Raza)
          .Include(m => m.Refugio)
          .Include(m => m.Multimedia)
-         .FirstOrDefaultAsync(m => m.MascotaId == mascotaId &&
-                                   m.Activo &&
-                                   (m.Estado == (byte)EstadoMascota.Disponible ||
-                                    m.Estado == (byte)EstadoMascota.EnProceso));
+         .FirstOrDefaultAsync(m => m.MascotaId == mascotaId && m.Activo);
+
     }
 
     public async Task<IEnumerable<Mascotas>> ObtenerMuestraMascotasDisponiblesAsync(int limiteMuestra = 50)

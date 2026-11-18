@@ -128,7 +128,7 @@ public class MascotasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetDetalle(int id)
     {
-        var result = await _mascotaService.ObtenerDetalleAsync(id);
+        var result = await _mascotaService.ObtenerDetalleAsync(id, User.GetUserId(), User.IsInRole("Administrador"));
         return Ok(result);
     }
 

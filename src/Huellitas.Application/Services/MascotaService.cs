@@ -104,12 +104,12 @@ public class MascotaService : IMascotaService
     {
         var mascota = await ValidarRefugioAsync(mascotaId, usuarioId);
 
-        if (dto.NuevoEstado == 3 && string.IsNullOrWhiteSpace(dto.Motivo))
+        if (dto.NuevoEstado == (byte)EstadoMascota.NoDisponible && string.IsNullOrWhiteSpace(dto.Motivo))
             throw AppException.BadRequest("El motivo es obligatorio al marcar como No Disponible.");
 
         byte estadoAnterior = mascota.Estado;
         mascota.Estado = dto.NuevoEstado;
-        mascota.MotivoBaja = dto.NuevoEstado == 3 ? dto.Motivo : null;
+        mascota.MotivoBaja = dto.NuevoEstado == (byte)EstadoMascota.NoDisponible ? dto.Motivo : null;
         mascota.FechaUltimaActualizacion = DateTime.Now;
 
         await _mascotaRepo.ActualizarAsync(mascota);
@@ -131,7 +131,7 @@ public class MascotaService : IMascotaService
             throw AppException.Conflict("No se puede dar de baja la mascota porque tiene solicitudes activas.");
 
         mascota.Activo = false;
-        mascota.Estado = 3; // No Disponible
+        mascota.Estado = (byte)EstadoMascota.NoDisponible; 
         mascota.MotivoBaja = motivo;
         mascota.FechaUltimaActualizacion = DateTime.Now;
 
@@ -188,12 +188,45 @@ public class MascotaService : IMascotaService
         };
     }
 
-    public async Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId)
+    public async Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId, int usuarioId, bool esAdmin)
     {
         var mascota = await _mascotaRepo.ObtenerDetallePublicoAsync(mascotaId)
-            ?? throw AppException.NotFound("La mascota no existe o no está disponible.");
+         ?? throw AppException.NotFound("La mascota no existe.");
+
+        // Validamos si el usuario tiene permiso para verla
+        await ValidarAccesoAMascotaAsync(mascota, usuarioId, esAdmin);
 
         return mascota.ToDetalleDto();
+    }
+
+    private async Task ValidarAccesoAMascotaAsync(Mascotas mascota, int usuarioId, bool esAdmin)
+    {
+        //Si está disponible o en proceso, todos pueden verla
+        if (mascota.Estado == (byte)EstadoMascota.Disponible ||
+            mascota.Estado == (byte)EstadoMascota.EnProceso)
+        {
+            return;
+        }
+
+        //Si es Administrador, siempre puede verla
+        if (esAdmin)
+        {
+            return;
+        }
+
+        //Si es un usuario logueado, verificamos si es el refugio dueño
+        if (usuarioId > 0)
+        {
+            var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+            if (refugio != null && mascota.RefugioId == refugio.RefugioId)
+            {
+                return;
+            }
+        }
+
+        //Si no cumple ninguna de las condiciones, lanzamos 404 
+        // (Usamos 404 en lugar de 403 para no revelar que la mascota existe)
+        throw AppException.NotFound("La mascota no está disponible.");
     }
 
     public async Task AgregarRegistroClinicoAsync(int mascotaId, CrearRegistroClinicoDTO dto, int usuarioId)
