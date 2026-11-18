@@ -22,6 +22,7 @@ public static class DependencyInjection
         services.AddScoped<IRefugioService, RefugioService>();
         services.AddScoped<IFavoritoService, FavoritoService>();
         services.AddScoped<IMatchService, MatchService>();
+        services.AddScoped<ICalificacionService, CalificacionService>();
         return services;
     }
 }

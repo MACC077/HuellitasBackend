@@ -1,6 +1,7 @@
 using Huellitas.API.Extensions;
 using Huellitas.Application.DTOs.Refugios;
 using Huellitas.Application.Interfaces.Services;
+using Huellitas.Application.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,7 +12,12 @@ namespace Huellitas.API.Controllers;
 public class RefugiosController : ControllerBase
 {
     private readonly IRefugioService _refugioService;
-    public RefugiosController(IRefugioService refugioService) => _refugioService = refugioService;
+    private readonly ICalificacionService _calificacionService;
+    public RefugiosController(IRefugioService refugioService, ICalificacionService calificacionService)
+    {
+        _refugioService = refugioService;
+        _calificacionService = calificacionService;
+    }
 
     /// <summary>HU-REF-02: Obtener el perfil del refugio autenticado.</summary>
     [HttpGet("mi-perfil", Name = "GetPerfilRefugio")]
@@ -89,5 +95,58 @@ public class RefugiosController : ControllerBase
     {
         var result = await _refugioService.ObtenerPerfilPublicoAsync(id);
         return Ok(result);
+    }
+
+    /// <summary>
+    /// HU-REF-04: Calificar a un refugio después de finalizar una adopción.
+    /// </summary>
+    [HttpPost("{id}/calificaciones", Name = "CalificarRefugio")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Calificar(int id, [FromBody] CrearCalificacionDTO dto)
+    {
+        await _calificacionService.CalificarRefugioAsync(User.GetUserId(), id, dto);
+        return Ok(new { mensaje = "¡Gracias por tu calificación!" });
+    }
+
+    /// <summary>
+    /// HU-REF-04: Obtener las calificaciones públicas de un refugio (Paginado).
+    /// </summary>
+    [HttpGet("{id}/calificaciones", Name = "GetCalificacionesRefugio")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetCalificaciones(int id, [FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
+    {
+        var result = await _calificacionService.ObtenerCalificacionesRefugioAsync(id, pagina, tamano);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// HU-REF-04: Editar una calificación existente (Solo el autor de la calificación).
+    /// </summary>
+    [HttpPut("{id}/calificaciones/{calificacionId}", Name = "EditarCalificacion")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> EditarCalificacion(int id, int calificacionId, [FromBody] ActualizarCalificacionDTO dto)
+    {
+        await _calificacionService.EditarCalificacionAsync(User.GetUserId(), id, calificacionId, dto);
+        return Ok(new { mensaje = "Calificación actualizada correctamente." });
+    }
+
+    /// <summary>
+    /// HU-REF-04: Eliminar una calificación (Solo el autor de la calificación).
+    /// </summary>
+    [HttpDelete("{id}/calificaciones/{calificacionId}", Name = "EliminarCalificacion")]
+    [Authorize(Roles = "Adoptante")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> EliminarCalificacion(int id, int calificacionId)
+    {
+        await _calificacionService.EliminarCalificacionAsync(User.GetUserId(), id, calificacionId);
+        return Ok(new { mensaje = "Calificación eliminada correctamente." });
     }
 }
