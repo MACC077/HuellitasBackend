@@ -23,6 +23,7 @@ public static class DependencyInjection
         services.AddScoped<IFavoritoService, FavoritoService>();
         services.AddScoped<IMatchService, MatchService>();
         services.AddScoped<ICalificacionService, CalificacionService>();
+        services.AddScoped<INecesidadService, NecesidadService>();
         return services;
     }
 }
