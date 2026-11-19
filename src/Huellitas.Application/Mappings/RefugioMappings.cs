@@ -1,6 +1,7 @@
-﻿using Huellitas.Application.DTOs.Refugios;
+﻿using Huellitas.Application.DTOs.Mascotas;
+using Huellitas.Application.DTOs.Refugios;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Persistence.Entities;
-using Huellitas.Application.DTOs.Mascotas;
 using System.Text.Json;
 
 namespace Huellitas.Application.Mappings;
@@ -73,6 +74,21 @@ public static class RefugioMappings
             }).ToList() ?? new(),
             //Reutilizamos el mapeo de mascotas que ya teníamos
             MascotasDisponibles = r.Mascota?.Select(m => m.ToResumenDto()).ToList() ?? new()
+        };
+    }
+
+    public static ApadrinamientoDTO ToDto(this Apadrinamientos a)
+    {
+        return new ApadrinamientoDTO
+        {
+            ApadrinamientoId = a.ApadrinamientoId,
+            MascotaId = a.MascotaId,
+            MascotaNombre = a.Mascota?.Nombre ?? "",
+            RefugioNombre = a.Mascota?.Refugio?.Nombre,
+            AdoptanteNombre = a.Usuario?.Nombre ?? "",
+            FechaInicio = a.FechaInicio.ToDateTime(TimeOnly.MinValue),
+            Estado = ((EstadoApadrinamiento)a.Estado).ToString(),
+            Observacion = a.Observacion
         };
     }
 

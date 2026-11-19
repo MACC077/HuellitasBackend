@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<IFavoritoRepository, FavoritoRepository>();
         services.AddScoped<ICalificacionRepository, CalificacionRepository>();
         services.AddScoped<INecesidadRepository, NecesidadRepository>();
+        services.AddScoped<IApadrinamientoRepository, ApadrinamientoRepository>();
         // Servicios
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<ICorreoService, CorreoService>();
