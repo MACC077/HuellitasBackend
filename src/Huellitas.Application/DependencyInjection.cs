@@ -25,6 +25,9 @@ public static class DependencyInjection
         services.AddScoped<ICalificacionService, CalificacionService>();
         services.AddScoped<INecesidadService, NecesidadService>();
         services.AddScoped<IApadrinamientoService, ApadrinamientoService>();
+        services.AddScoped<ITrazabilidadService, TrazabilidadService>();
+        services.AddScoped<INotificacionService, NotificacionService>();
+        services.AddScoped<ISeguimientoService, SeguimientoService>();
         return services;
     }
 }

@@ -95,12 +95,25 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             .ToListAsync();
     }
 
+    public async Task<Adopciones?> ObtenerAdopcionPorIdConDetallesAsync(int adopcionId)
+    {
+        return await _context.Adopciones
+            .Include(a => a.Solicitud)
+                .ThenInclude(s => s.Usuario)
+            .Include(a => a.Solicitud)
+                .ThenInclude(s => s.Mascota)
+                    .ThenInclude(m => m.Refugio)
+            .FirstOrDefaultAsync(a => a.AdopcionId == adopcionId && a.Activo);
+    }
+
     public async Task EjecutarTransaccionFinalizacionAsync(
         SolicitudesAdopcion solicitudAprobada,
         List<SolicitudesAdopcion> otrasSolicitudes,
         Mascotas mascota,
         Adopciones nuevaAdopcion,
-        Bitacoras bitacora)
+        Bitacoras bitacora,
+        IEnumerable<CambiosDeEstado> cambiosEstado,
+        IEnumerable<Notificaciones> notificaciones)
     {
         //INICIO DE LA TRANSACCIÓN (Todo o nada)
         using var transaction = await _context.Database.BeginTransactionAsync();
@@ -111,6 +124,8 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
             _context.Mascotas.Update(mascota);
             _context.Adopciones.Add(nuevaAdopcion);
             _context.Bitacoras.Add(bitacora);
+            _context.CambiosDeEstados.AddRange(cambiosEstado);
+            _context.Notificaciones.AddRange(notificaciones);
 
             await _context.SaveChangesAsync();
             await transaction.CommitAsync();

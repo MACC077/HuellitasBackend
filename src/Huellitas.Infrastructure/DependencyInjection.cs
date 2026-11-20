@@ -30,6 +30,9 @@ public static class DependencyInjection
         services.AddScoped<ICalificacionRepository, CalificacionRepository>();
         services.AddScoped<INecesidadRepository, NecesidadRepository>();
         services.AddScoped<IApadrinamientoRepository, ApadrinamientoRepository>();
+        services.AddScoped<ITrazabilidadRepository, TrazabilidadRepository>();
+        services.AddScoped<INotificacionRepository, NotificacionRepository>();
+        services.AddScoped<ISeguimientoRepository, SeguimientoRepository>();
         // Servicios
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<ICorreoService, CorreoService>();
