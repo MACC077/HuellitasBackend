@@ -18,14 +18,28 @@ public class AdopcionService : IAdopcionService
     private readonly IRefugioRepository _refugioRepo;
     private readonly IPerfilAdoptanteRepository _perfilRepo;
     private readonly IPdfService _pdfService;
+    private readonly ITrazabilidadRepository _trazabilidadRepo;
+    private readonly INotificacionService _notificacionService;
+    private readonly ISeguimientoService _seguimientoService;
 
-    public AdopcionService(ISolicitudAdopcionRepository solicitudRepo, IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo, IPerfilAdoptanteRepository perfilRepo, IPdfService pdfService)
+    public AdopcionService(
+        ISolicitudAdopcionRepository solicitudRepo,
+        IMascotaRepository mascotaRepo,
+        IRefugioRepository refugioRepo,
+        IPerfilAdoptanteRepository perfilRepo,
+        IPdfService pdfService,
+        ITrazabilidadRepository trazabilidadRepo,
+        INotificacionService notificacionService,
+        ISeguimientoService seguimientoService)
     {
         _solicitudRepo = solicitudRepo;
         _mascotaRepo = mascotaRepo;
         _refugioRepo = refugioRepo;
         _perfilRepo = perfilRepo;
         _pdfService = pdfService;
+        _trazabilidadRepo = trazabilidadRepo;
+        _notificacionService = notificacionService;
+        _seguimientoService = seguimientoService;
     }
 
 
@@ -78,6 +92,15 @@ public class AdopcionService : IAdopcionService
         {
             await _solicitudRepo.ActualizarEstadoMascotaAsync(dto.MascotaId, (byte)EstadoMascota.EnProceso);
         }
+
+        await RegistrarCambioEstadoAsync(
+            solicitud.SolicitudId,
+            usuarioId,
+            null,
+            EstadoSolicitudAdopcion.Enviada,
+            "Solicitud creada por el adoptante.");
+
+        await NotificarAsync(usuarioId, "Tu solicitud ha sido enviada. El refugio revisará tu perfil.");
 
         // Retornar el DTO descriptivo
         return solicitud.ToSolicitudCreadaDto(mascota.Nombre);
@@ -139,11 +162,21 @@ public class AdopcionService : IAdopcionService
             throw AppException.Conflict("Solo se pueden aprobar solicitudes que estén en estado Enviada, En Revisión o Entrevista.");
         }
 
+        var estadoAnterior = solicitud.Estado;
         solicitud.Estado = (byte)EstadoSolicitudAdopcion.Aprobada;
         solicitud.Observaciones = dto.Observaciones;
         solicitud.FechaModificacion = DateTime.Now;
 
         await _solicitudRepo.ActualizarAsync(solicitud);
+
+        await RegistrarCambioEstadoAsync(
+            solicitud.SolicitudId,
+            usuarioId,
+            estadoAnterior,
+            EstadoSolicitudAdopcion.Aprobada,
+            dto.Observaciones ?? "Solicitud aprobada por el refugio.");
+
+        await NotificarAsync(solicitud.UsuarioId, "¡Tu solicitud de adopción fue aprobada! El refugio coordinará los siguientes pasos.");
     }
 
     public async Task RechazarSolicitudAsync(int solicitudId, RechazarSolicitudDTO dto, int usuarioId)
@@ -156,11 +189,21 @@ public class AdopcionService : IAdopcionService
         if (solicitud.Estado != (byte)EstadoSolicitudAdopcion.Enviada && solicitud.Estado != (byte)EstadoSolicitudAdopcion.EnRevision)
             throw AppException.Conflict("Solo se pueden rechazar solicitudes activas.");
 
+        var estadoAnterior = solicitud.Estado;
         solicitud.Estado = (byte)EstadoSolicitudAdopcion.Rechazada;
         solicitud.MotivoRechazo = dto.MotivoRechazo;
         solicitud.FechaModificacion = DateTime.Now;
 
         await _solicitudRepo.ActualizarAsync(solicitud);
+
+        await RegistrarCambioEstadoAsync(
+            solicitud.SolicitudId,
+            usuarioId,
+            estadoAnterior,
+            EstadoSolicitudAdopcion.Rechazada,
+            $"Solicitud rechazada: {dto.MotivoRechazo}");
+
+        await NotificarAsync(solicitud.UsuarioId, $"Tu solicitud de adopción fue rechazada. Motivo: {dto.MotivoRechazo}");
     }
 
 
@@ -192,15 +235,45 @@ public class AdopcionService : IAdopcionService
         var otrasSolicitudes = await _solicitudRepo.ObtenerSolicitudesActivasPorMascotaAsync(solicitud.MascotaId);
         otrasSolicitudes = otrasSolicitudes.Where(s => s.SolicitudId != solicitudId).ToList();
 
-        //Actualizar estados
-        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Finalizada; 
+        //Actualizar estados y preparar la trazabilidad dentro de la misma transacción
+        var estadoAnterior = solicitud.Estado;
+        solicitud.Estado = (byte)EstadoSolicitudAdopcion.Finalizada;
         solicitud.FechaModificacion = DateTime.Now;
+
+        var cambiosEstado = new List<CambiosDeEstado>
+        {
+            CrearCambioEstado(
+                solicitud.SolicitudId,
+                usuarioId,
+                estadoAnterior,
+                EstadoSolicitudAdopcion.Finalizada,
+                "Adopción finalizada por el refugio.")
+        };
+
+        var notificaciones = new List<Notificaciones>
+        {
+            CrearNotificacion(
+                solicitud.UsuarioId,
+                $"¡Felicidades! Tu adopción de {solicitud.Mascota.Nombre} fue finalizada.")
+        };
 
         foreach (var otra in otrasSolicitudes)
         {
+            var estadoAnteriorOtra = otra.Estado;
             otra.Estado = (byte)EstadoSolicitudAdopcion.Cerrada;
             otra.Observaciones = "Proceso cerrado automáticamente. La mascota fue adoptada por otro usuario.";
             otra.FechaModificacion = DateTime.Now;
+
+            cambiosEstado.Add(CrearCambioEstado(
+                otra.SolicitudId,
+                usuarioId,
+                estadoAnteriorOtra,
+                EstadoSolicitudAdopcion.Cerrada,
+                "Cerrada automáticamente porque la mascota fue adoptada por otro usuario."));
+
+            notificaciones.Add(CrearNotificacion(
+                otra.UsuarioId,
+                $"El proceso de adopción de {solicitud.Mascota.Nombre} se cerró porque la mascota fue adoptada por otro usuario."));
         }
 
         //Actualizar la Mascota a Adoptada
@@ -227,9 +300,14 @@ public class AdopcionService : IAdopcionService
             FechaCreacion = DateTime.Now
         };
 
-        //Ejecutar la transacción
+        //Ejecutar la transacción (solicitud, mascota, adopción, bitácora, cambios y notificaciones)
         await _solicitudRepo.EjecutarTransaccionFinalizacionAsync(
-            solicitud, otrasSolicitudes, mascota, nuevaAdopcion, bitacora);
+            solicitud, otrasSolicitudes, mascota, nuevaAdopcion, bitacora, cambiosEstado, notificaciones);
+
+        //Crear el plan de seguimiento solo cuando la adopción quedó persistida (idempotente)
+        var adopcion = await _solicitudRepo.ObtenerAdopcionConDetallesAsync(solicitudId);
+        if (adopcion != null)
+            await _seguimientoService.CrearPlanAsync(adopcion.AdopcionId);
     }
 
     public async Task AgendarVisitaAsync(int solicitudId, AgendarVisitaDTO dto, int usuarioId)
@@ -264,9 +342,19 @@ public class AdopcionService : IAdopcionService
         await _solicitudRepo.InsertarVisitaAsync(nuevaVisita);
 
         //Actualizar estado de la solicitud a Entrevista (2)
+        var estadoAnterior = solicitud.Estado;
         solicitud.Estado = (byte)EstadoSolicitudAdopcion.Entrevista;
         solicitud.FechaModificacion = DateTime.Now;
         await _solicitudRepo.ActualizarAsync(solicitud);
+
+        await RegistrarCambioEstadoAsync(
+            solicitud.SolicitudId,
+            usuarioId,
+            estadoAnterior,
+            EstadoSolicitudAdopcion.Entrevista,
+            $"Visita agendada para {dto.Fecha:yyyy-MM-dd} ({dto.Modalidad}).");
+
+        await NotificarAsync(solicitud.UsuarioId, $"El refugio agendó una visita para tu solicitud el {dto.Fecha:yyyy-MM-dd}.");
     }
 
     public async Task ConfirmarVisitaAsync(int solicitudId, ConfirmarVisitaDTO dto, int usuarioId)
@@ -401,10 +489,20 @@ public class AdopcionService : IAdopcionService
             throw AppException.Conflict("Solo se pueden marcar en revisión las solicitudes que estén en estado 'Enviada'.");
 
         // 3. Actualizar el estado
+        var estadoAnterior = solicitud.Estado;
         solicitud.Estado = (byte)EstadoSolicitudAdopcion.EnRevision;
         solicitud.FechaModificacion = DateTime.Now;
 
         await _solicitudRepo.ActualizarAsync(solicitud);
+
+        await RegistrarCambioEstadoAsync(
+            solicitud.SolicitudId,
+            usuarioId,
+            estadoAnterior,
+            EstadoSolicitudAdopcion.EnRevision,
+            "Solicitud marcada en revisión por el refugio.");
+
+        await NotificarAsync(solicitud.UsuarioId, "El refugio está revisando tu solicitud de adopción.");
     }
 
     public async Task<IEnumerable<VisitaResumenDTO>> ObtenerMisVisitasAsync(int usuarioId)
@@ -421,5 +519,59 @@ public class AdopcionService : IAdopcionService
 
         var visitas = await _solicitudRepo.ObtenerVisitasPorRefugioAsync(refugio.RefugioId);
         return visitas.Select(v => v.ToVisitaDto());
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // Helpers de trazabilidad y notificaciones
+    // ═══════════════════════════════════════════════════════
+
+    private async Task RegistrarCambioEstadoAsync(
+        int solicitudId,
+        int usuarioId,
+        byte? estadoAnterior,
+        EstadoSolicitudAdopcion estadoNuevo,
+        string observacion)
+    {
+        await _trazabilidadRepo.InsertarCambioEstadoAsync(
+            CrearCambioEstado(solicitudId, usuarioId, estadoAnterior, estadoNuevo, observacion));
+    }
+
+    private static CambiosDeEstado CrearCambioEstado(
+        int solicitudId,
+        int usuarioId,
+        byte? estadoAnterior,
+        EstadoSolicitudAdopcion estadoNuevo,
+        string observacion)
+    {
+        return new CambiosDeEstado
+        {
+            UsuarioId = usuarioId,
+            Entidad = EntidadAfectada.SolicitudAdopcion.ToString(),
+            IdEntidad = solicitudId,
+            EstadoAnterior = estadoAnterior.HasValue
+                ? ((EstadoSolicitudAdopcion)estadoAnterior.Value).ToString()
+                : null,
+            EstadoNuevo = estadoNuevo.ToString(),
+            Observacion = observacion,
+            FechaCreacion = DateTime.Now
+        };
+    }
+
+    private async Task NotificarAsync(int usuarioId, string mensaje)
+    {
+        await _notificacionService.CrearNotificacionAsync(usuarioId, mensaje, CanalNotificacion.InApp);
+    }
+
+    private static Notificaciones CrearNotificacion(int usuarioId, string mensaje)
+    {
+        return new Notificaciones
+        {
+            UsuarioId = usuarioId,
+            Tipo = "Sistema",
+            Mensaje = mensaje,
+            Canal = (byte)CanalNotificacion.InApp,
+            FechaEnvio = DateTime.Now,
+            Leida = false
+        };
     }
 }

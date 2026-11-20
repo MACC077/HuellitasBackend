@@ -12,12 +12,15 @@ public interface ISolicitudAdopcionRepository
     Task<SolicitudesAdopcion?> ObtenerPorIdConMascotaAsync(int solicitudId);
     Task ActualizarAsync(SolicitudesAdopcion solicitud);
     Task<List<SolicitudesAdopcion>> ObtenerSolicitudesActivasPorMascotaAsync(int mascotaId);
+    Task<Adopciones?> ObtenerAdopcionPorIdConDetallesAsync(int adopcionId);
     Task EjecutarTransaccionFinalizacionAsync(
         SolicitudesAdopcion solicitudAprobada,
         List<SolicitudesAdopcion> otrasSolicitudes,
         Mascotas mascota,
         Adopciones nuevaAdopcion,
-        Bitacoras bitacora
+        Bitacoras bitacora,
+        IEnumerable<CambiosDeEstado> cambiosEstado,
+        IEnumerable<Notificaciones> notificaciones
     );
     Task InsertarVisitaAsync(VisitasEntrevista visita);
     Task<VisitasEntrevista?> ObtenerVisitaActivaPorSolicitudAsync(int solicitudId);

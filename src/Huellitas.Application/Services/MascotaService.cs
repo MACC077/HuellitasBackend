@@ -14,12 +14,18 @@ public class MascotaService : IMascotaService
     private readonly IMascotaRepository _mascotaRepo;
     private readonly IRefugioRepository _refugioRepo;
     private readonly IRegistroClinicoRepository _registroClinicoRepo;
+    private readonly ITrazabilidadRepository _trazabilidadRepo;
 
-    public MascotaService(IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo, IRegistroClinicoRepository registroClinicoRepo)
+    public MascotaService(
+        IMascotaRepository mascotaRepo,
+        IRefugioRepository refugioRepo,
+        IRegistroClinicoRepository registroClinicoRepo,
+        ITrazabilidadRepository trazabilidadRepo)
     {
         _mascotaRepo = mascotaRepo;
         _refugioRepo = refugioRepo;
         _registroClinicoRepo = registroClinicoRepo;
+        _trazabilidadRepo = trazabilidadRepo;
     }
 
     public async Task<int> RegistrarAsync(CrearMascotaDTO dto, int usuarioId)
@@ -58,7 +64,7 @@ public class MascotaService : IMascotaService
             esPrimera = false;
         }
 
-        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
             Tipo = (byte)TipoBitacora.Ingreso,
@@ -114,7 +120,7 @@ public class MascotaService : IMascotaService
 
         await _mascotaRepo.ActualizarAsync(mascota);
 
-        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
             Tipo = (byte)TipoBitacora.CambioEstado,
@@ -249,7 +255,7 @@ public class MascotaService : IMascotaService
         await _registroClinicoRepo.InsertarAsync(registro);
 
         // 3. Registrar en la bitácora
-        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascotaId,
             Tipo = (byte)TipoBitacora.AtencionClinica,
