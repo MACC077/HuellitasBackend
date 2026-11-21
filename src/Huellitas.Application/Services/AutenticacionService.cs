@@ -21,19 +21,25 @@ public class AutenticacionService : IAutenticacionService
     private readonly IHashContrasena _hash;
     private readonly ICorreoService _correo;
     private readonly ITokenService _tokenService;
+    private readonly IRefugioRepository _refugioRepo;
+    private readonly IUsuarioRepository _usuarioRepo;
 
     public AutenticacionService(
         IUsuarioRepository repo,
         IRefreshTokenRepository refreshRepo,
         IHashContrasena hash,
         ICorreoService correo,
-        ITokenService tokenService)
+        ITokenService tokenService,
+        IRefugioRepository refugioRepo,
+        IUsuarioRepository usuarioRepo)
     {
         _repo = repo;
         _refreshRepo = refreshRepo;
         _hash = hash;
         _correo = correo;
         _tokenService = tokenService;
+        _refugioRepo = refugioRepo;
+        _usuarioRepo = usuarioRepo;
     }
 
     public async Task<int> RegistrarAsync(CrearUsuarioDTO dto)
@@ -221,30 +227,30 @@ public class AutenticacionService : IAutenticacionService
     }
     public async Task<TokenResponseDTO> RefreshTokenAsync(string refreshToken)
     {
-        // 1. Hashear y buscar
+        //Hashear y buscar
         var hash = _tokenService.HashearToken(refreshToken);
         var tokenDb = await _refreshRepo.ObtenerPorHashAsync(hash);
 
         if (tokenDb == null)
             throw AppException.Unauthorized("Refresh token inválido.");
 
-        // 2. Detección de reutilización → revocar TODA la cadena
+        //Detección de reutilización → revocar TODA la cadena
         if (tokenDb.EstaRevocado)
         {
             await _refreshRepo.RevocarTodosDelUsuarioAsync(tokenDb.UsuarioId, "Reutilización detectada - sesión comprometida");
             throw AppException.Unauthorized("Token revocado. Inicia sesión nuevamente.");
         }
 
-        // 3. Verificar expiración
+        //Verificar expiración
         if (tokenDb.Expira < DateTime.Now)
             throw AppException.Unauthorized("Refresh token expirado. Inicia sesión nuevamente.");
 
-        // 4. Verificar estado del usuario
+        //Verificar estado del usuario
         var usuario = tokenDb.Usuario;
         if (usuario.Estado != (byte)EstadoUsuario.Activo)
             throw AppException.Forbidden("La cuenta no está activa.");
 
-        // 5. Rotación: revocar el actual
+        //Rotación: revocar el actual
         var nuevoRefreshToken = _tokenService.GenerarRefreshToken();
         var nuevoHash = _tokenService.HashearToken(nuevoRefreshToken);
 
@@ -253,7 +259,7 @@ public class AutenticacionService : IAutenticacionService
         tokenDb.ReemplazadoPor = nuevoHash;
         await _refreshRepo.ActualizarAsync(tokenDb);
 
-        // 6. Insertar el nuevo
+        //Insertar el nuevo
         var diasRefresh = 7;
         await _refreshRepo.InsertarAsync(new RefreshTokens
         {
@@ -264,7 +270,7 @@ public class AutenticacionService : IAutenticacionService
             Creado = DateTime.Now
         });
 
-        // 7. Generar nuevo access token
+        //Generar nuevo access token
         var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
         var nuevoAccessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
 
@@ -354,5 +360,81 @@ public class AutenticacionService : IAutenticacionService
         //Seguridad: Revocar todos los refresh tokens activos (fuerza relogin en otros dispositivos)
         await _refreshRepo.RevocarTodosDelUsuarioAsync(usuario.UsuarioId, "Contraseña restablecida");
 
+    }
+
+    public async Task<int> RegistrarRefugioAsync(RegistroRefugioPublicoDTO dto)
+    {
+        if (await _usuarioRepo.ExisteCorreoAsync(dto.Correo))
+            throw AppException.Conflict("El correo ya está registrado.");
+
+        if (await _refugioRepo.ExisteNitAsync(dto.Nit))
+            throw AppException.Conflict("Ya existe un refugio registrado con este NIT.");
+
+        if (!dto.AceptaPolitica)
+            throw AppException.BadRequest("Debes aceptar la política de tratamiento de datos.");
+
+        //Crear el Refugio
+        var refugio = new Refugios
+        {
+            Nombre = dto.NombreRefugio,
+            Nit = dto.Nit,
+            Direccion = dto.Direccion,
+            Telefono = dto.Telefono,
+            Correo = dto.Correo,
+            Encargado = dto.NombreEncargado,
+            Descripcion = dto.Descripcion,
+            RedesSociales = "{}", // Inicializado como JSON vacío
+            EstadoVerificacion = (byte)EstadoVerificacionRefugio.Pendiente,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+        await _refugioRepo.InsertarAsync(refugio);
+
+        //Crear el Usuario
+        var usuario = new Usuarios
+        {
+            Nombre = dto.NombreEncargado,
+            Correo = dto.Correo,
+            Telefono = dto.Telefono,
+            ContrasenaHash = _hash.Hashear(dto.Contrasena),
+            RolId = (int)RolUsuario.Refugio,
+            RefugioId = refugio.RefugioId, // Vinculación directa
+            Estado = (byte)EstadoUsuario.PendienteVerificacion,
+            IntentosFallidos = 0,
+            Activo = true,
+            FechaRegistro = DateTime.Now,
+            FechaCreacion = DateTime.Now
+        };
+        await _usuarioRepo.InsertarAsync(usuario);
+
+        //Guardar consentimiento de la política (Opcional pero recomendado)
+        var politicaId = await _usuarioRepo.ObtenerPoliticaActivaIdAsync();
+        if (politicaId > 0)
+        {
+            await _usuarioRepo.InsertarConsentimientoAsync(new ConsentimientosDatos
+            {
+                UsuarioId = usuario.UsuarioId,
+                PoliticaId = politicaId,
+                VersionAceptada = "1.0",
+                FechaAceptacion = DateTime.Now,
+                Activo = true
+            });
+        }
+
+        //Generar Token y Enviar Correo de Verificación (Reutilizamos la lógica)
+        var tokenValor = _tokenService.GenerarTokenVerificacion(usuario.UsuarioId);
+        await _usuarioRepo.InsertarTokenAsync(new TokensSeguridad
+        {
+            UsuarioId = usuario.UsuarioId,
+            Tipo = (byte)TipoToken.VerificacionCorreo,
+            Valor = tokenValor,
+            FechaExpiracion = DateTime.Now.AddHours(24),
+            Usado = false,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        });
+
+        await _correo.EnviarCorreoVerificacionAsync(usuario.Correo, usuario.Nombre, tokenValor);
+        return refugio.RefugioId;
     }
 }

@@ -118,7 +118,7 @@ public class RefugiosController : ControllerBase
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> GetCalificaciones(int id, [FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
     {
-        var result = await _calificacionService.ObtenerCalificacionesRefugioAsync(id, pagina, tamano);
+        var result = await _calificacionService.ObtenerCalificacionesRefugioAsync(id, User.GetUserId(), pagina, tamano);
         return Ok(result);
     }
 

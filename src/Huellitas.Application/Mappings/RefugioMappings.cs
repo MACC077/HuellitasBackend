@@ -16,9 +16,7 @@ public static class RefugioMappings
             Descripcion = r.Descripcion ?? string.Empty,
             Direccion = r.Direccion,
             Telefono = r.Telefono ?? string.Empty,
-            RedesSociales = string.IsNullOrEmpty(r.RedesSociales)
-                ? null
-                : JsonSerializer.Deserialize<Dictionary<string, string>>(r.RedesSociales),
+            RedesSociales = DeserializarRedesSociales(r.RedesSociales),
             EstadoVerificacion = r.EstadoVerificacion,
             Requisitos = r.RequisitosAdopcions?.Select(req => new RequisitoDTO
             {
@@ -63,7 +61,7 @@ public static class RefugioMappings
             Direccion = r.Direccion,
             Telefono = r.Telefono,
             Correo = r.Correo,
-            RedesSociales = r.RedesSociales,
+            RedesSociales = DeserializarRedesSociales(r.RedesSociales),
             Verificado = r.EstadoVerificacion == 1,
             Requisitos = r.RequisitosAdopcions?.Select(req => new RequisitoDTO
             {
@@ -95,5 +93,25 @@ public static class RefugioMappings
     public static string? SerializarRedesSociales(Dictionary<string, string>? redes)
     {
         return redes == null ? null : JsonSerializer.Serialize(redes);
+    }
+
+    private static Dictionary<string, string>? DeserializarRedesSociales(string? redesSociales)
+    {
+        if (string.IsNullOrWhiteSpace(redesSociales))
+            return null;
+
+        try
+        {
+            // Intentamos parsear el JSON nuevo
+            return JsonSerializer.Deserialize<Dictionary<string, string>>(redesSociales);
+        }
+        catch (JsonException)
+        {
+            // Si falla (es texto plano viejo), lo adaptamos al formato diccionario
+            return new Dictionary<string, string>
+            {
+                { "redes", redesSociales } // Lo guardamos bajo una llave genérica
+            };
+        }
     }
 }

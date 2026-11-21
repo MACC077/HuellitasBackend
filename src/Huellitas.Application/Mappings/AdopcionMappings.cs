@@ -39,6 +39,7 @@ public static class AdopcionMappings
         return new SolicitudResumenDTO
         {
             SolicitudId = s.SolicitudId,
+            AdopcionId = s.Adopciones?.FirstOrDefault()?.AdopcionId,
             Codigo = s.Codigo,
             MascotaNombre = s.Mascota?.Nombre ?? "",
             MascotaFoto = s.Mascota?.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo,

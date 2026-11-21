@@ -176,4 +176,21 @@ public class UsuariosController : ControllerBase
         await _usuarioService.ActualizarPerfilAdoptanteAsync(User.GetUserId(), dto);
         return Ok(new { mensaje = "Perfil de adoptante actualizado correctamente." });
     }
+
+    /// <summary>
+    /// Registro público de un refugio (Crea la cuenta y el refugio simultáneamente).
+    /// </summary>
+    [HttpPost("registro-refugio", Name = "RegistroRefugio")]
+    [AllowAnonymous]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> RegistroRefugio([FromBody] RegistroRefugioPublicoDTO dto)
+    {
+        var refugioId = await _auth.RegistrarRefugioAsync(dto);
+        return Ok(new
+        {
+            mensaje = "Refugio registrado exitosamente. Revisa tu correo para verificar la cuenta y espera la aprobación del administrador.",
+            refugioId
+        });
+    }
 }

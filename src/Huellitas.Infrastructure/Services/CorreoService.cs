@@ -39,9 +39,9 @@ public class CorreoService : ICorreoService
 
     public async Task EnviarCorreoRecuperacionAsync(string destinatario, string nombre, string token)
     {
-        var baseUrl = _config["App:PublicBaseUrl"] ?? _urlCorreoDev;
-        var recoveryPath = _config["App:RecoveryPath"] ?? "/api/v1/Usuarios/restablecer";
-        var enlace = $"{baseUrl}{recoveryPath}";
+        var frontendUrl = _config["App:FrontendUrl"] ?? "http://localhost:5173";
+        var recoveryPath = _config["App:RecoveryFrontendPath"] ?? "/restablecer";
+        var enlace = $"{frontendUrl.TrimEnd('/')}{recoveryPath}?token={token}";
 
         var html = $@"
             <h2>Hola {nombre},</h2>

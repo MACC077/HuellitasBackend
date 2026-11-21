@@ -57,7 +57,7 @@ public class CalificacionService : ICalificacionService
         await _calificacionRepo.InsertarAsync(calificacion);
     }
 
-    public async Task<PagedResult<CalificacionDTO>> ObtenerCalificacionesRefugioAsync(int refugioId, int pagina, int tamano)
+    public async Task<PagedResult<CalificacionDTO>> ObtenerCalificacionesRefugioAsync(int refugioId, int usuarioId, int pagina, int tamano)
     {
         var (items, total) = await _calificacionRepo.ObtenerPorRefugioAsync(refugioId, pagina, tamano);
 
@@ -69,7 +69,8 @@ public class CalificacionService : ICalificacionService
                 AdoptanteNombre = c.Usuario?.Nombre ?? "Adoptante Anónimo",
                 Puntaje = c.Puntaje,
                 Comentario = c.Comentario,
-                Fecha = c.Fecha
+                Fecha = c.Fecha,
+                EsPropia = (usuarioId > 0 && c.UsuarioId == usuarioId)
             }).ToList(),
             Pagina = pagina,
             TamanoPagina = tamano,

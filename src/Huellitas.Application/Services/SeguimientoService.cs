@@ -87,7 +87,9 @@ public class SeguimientoService : ISeguimientoService
                 FechaProgramada = s.FechaProgramada,
                 FechaEnvio = s.FechaEnvio,
                 Estado = ((EstadoSeguimiento)s.Estado).ToString(),
-                Resultado = s.Resultado?.ToString(),
+                Resultado = s.Resultado.HasValue
+                ? ((ResultadoSeguimiento)s.Resultado.Value).ToString()
+                : null,
                 FotosUrls = s.Multimedia.Where(m => m.Activo).Select(m => m.Archivo).ToList()
             }).ToList()
         };
@@ -131,6 +133,9 @@ public class SeguimientoService : ISeguimientoService
 
     public async Task EvaluarSeguimientoAsync(int seguimientoId, byte resultado, int usuarioId)
     {
+        if (!Enum.IsDefined(typeof(ResultadoSeguimiento), resultado))
+            throw AppException.BadRequest("El resultado enviado no es válido. Use 0 (Conforme) o 1 (Requiere Atención).");
+
         var seguimiento = await _repo.ObtenerSeguimientoPorIdAsync(seguimientoId)
             ?? throw AppException.NotFound("Seguimiento no encontrado.");
 

@@ -14,6 +14,7 @@ public class CalificacionDTO
     public byte Puntaje { get; set; }
     public string? Comentario { get; set; }
     public DateTime Fecha { get; set; }
+    public bool EsPropia { get; set; }
 }
 
 public class ActualizarCalificacionDTO

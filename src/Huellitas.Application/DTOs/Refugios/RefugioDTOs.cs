@@ -58,7 +58,7 @@ public class RefugioPublicoDTO
     public string Direccion { get; set; } = string.Empty;
     public string? Telefono { get; set; }
     public string? Correo { get; set; }
-    public string? RedesSociales { get; set; }
+    public Dictionary<string, string>? RedesSociales { get; set; }
     public bool Verificado { get; set; }
     public List<RequisitoDTO> Requisitos { get; set; } = new();
     public List<MascotaResumenDTO> MascotasDisponibles { get; set; } = new();

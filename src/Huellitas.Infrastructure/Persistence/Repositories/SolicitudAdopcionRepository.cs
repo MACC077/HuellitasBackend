@@ -46,6 +46,7 @@ public class SolicitudAdopcionRepository : ISolicitudAdopcionRepository
         var query = _context.SolicitudesAdopcion
             .Include(s => s.Usuario)
             .Include(s => s.Mascota)
+            .Include(s => s.Adopciones) 
             .Where(s => s.Mascota.RefugioId == refugioId && s.Activo)
             .OrderByDescending(s => s.FechaEnvio);
 
