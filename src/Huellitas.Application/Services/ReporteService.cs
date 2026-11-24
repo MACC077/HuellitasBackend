@@ -35,7 +35,7 @@ public class ReporteService : IReporteService
     public async Task<ReporteCreadoDTO> CrearReporteAsync(CrearReporteDTO dto, int usuarioId)
     {
         // La validación de campos del DTO vive en CrearReporteValidator.
-        NormalizarFotos(dto);
+        dto.FotosUrls = NormalizarFotos(dto.FotosUrls);
 
         // El reporte puede ser anónimo: si no hay usuario autenticado, UsuarioId queda null.
         int? usuarioReportante = usuarioId > 0 ? usuarioId : null;
@@ -305,6 +305,95 @@ public class ReporteService : IReporteService
         return reportes.Select(r => r.ToMapaDto()).ToList();
     }
 
+    public async Task ActualizarReporteAsync(int reporteId, ActualizarReporteDTO dto, int usuarioId)
+    {
+        // La validación de campos del DTO vive en ActualizarReporteValidator.
+        var reporte = await _reporteRepo.ObtenerBasicoAsync(reporteId)
+            ?? throw AppException.NotFound("El reporte no existe.");
+
+        if (!reporte.Activo)
+            throw AppException.NotFound("El reporte no está disponible.");
+
+        if (reporte.MascotaId is not null)
+            throw AppException.Conflict("El reporte ya fue convertido en mascota y no se puede editar.");
+
+        // Igual que en mascotas: si llegan fotos, reemplazan a las actuales;
+        // si la lista viene vacía, se conservan las existentes.
+        var fotos = dto.FotosUrls is { Count: > 0 }
+            ? NormalizarFotos(dto.FotosUrls)
+                .Select(url => new ReporteMultimedia
+                {
+                    RutaArchivo = url,
+                    Activo = true
+                })
+                .ToList()
+            : null;
+
+        var ahora = DateTime.Now;
+        var cambio = CrearCambio(
+            reporteId,
+            usuarioId > 0 ? usuarioId : null,
+            (EstadoReporte)reporte.Estado,
+            (EstadoReporte)reporte.Estado,
+            "Reporte editado por un administrador.",
+            ahora);
+
+        var actualizado = await _reporteRepo.ActualizarAsync(
+            reporteId,
+            dto.ToDatosActualizados(),
+            fotos,
+            cambio);
+
+        if (!actualizado)
+            throw AppException.Conflict("El reporte cambió. Actualiza la información e intenta nuevamente.");
+    }
+
+    public async Task EliminarReporteAsync(int reporteId, string? motivo, int usuarioId, bool esAdmin)
+    {
+        var reporte = await _reporteRepo.ObtenerBasicoAsync(reporteId)
+            ?? throw AppException.NotFound("El reporte no existe.");
+
+        if (!reporte.Activo)
+            throw AppException.NotFound("El reporte no está disponible.");
+
+        if (reporte.MascotaId is not null)
+            throw AppException.Conflict("El reporte ya fue convertido en mascota y no se puede eliminar.");
+
+        if (!esAdmin)
+        {
+            // El reportante solo puede eliminar su propio reporte mientras siga
+            // sin atención; una vez tomado, solo un administrador puede hacerlo.
+            if (reporte.UsuarioId is null || reporte.UsuarioId != usuarioId)
+                throw AppException.Forbidden("Solo el reportante o un administrador pueden eliminar el reporte.");
+
+            if (reporte.RefugioId is not null || (EstadoReporte)reporte.Estado != EstadoReporte.Recibido)
+                throw AppException.Conflict("El reporte ya está en atención y solo un administrador puede eliminarlo.");
+        }
+
+        var motivoNormalizado = string.IsNullOrWhiteSpace(motivo) ? null : motivo.Trim();
+        var observacion = motivoNormalizado is null
+            ? "Reporte eliminado (borrado lógico)."
+            : $"Reporte eliminado (borrado lógico). Motivo: {motivoNormalizado}";
+
+        var ahora = DateTime.Now;
+        var cambio = CrearCambio(
+            reporteId,
+            usuarioId > 0 ? usuarioId : null,
+            (EstadoReporte)reporte.Estado,
+            (EstadoReporte)reporte.Estado,
+            observacion,
+            ahora);
+
+        var eliminado = await _reporteRepo.EliminarAsync(
+            reporteId,
+            esAdmin ? (byte?)null : reporte.Estado,
+            exigirSinRefugio: !esAdmin,
+            cambio: cambio);
+
+        if (!eliminado)
+            throw AppException.Conflict("El reporte cambió. Actualiza la información e intenta nuevamente.");
+    }
+
     private async Task<Refugios> ObtenerRefugioActivoAsync(int usuarioId)
     {
         if (usuarioId <= 0)
@@ -341,15 +430,12 @@ public class ReporteService : IReporteService
         return refugio is not null && refugio.RefugioId == reporte.RefugioId;
     }
 
-    private static void NormalizarFotos(CrearReporteDTO dto)
+    private static List<string> NormalizarFotos(IEnumerable<string>? urls)
     {
-        if (dto.FotosUrls is null)
-        {
-            dto.FotosUrls = new List<string>();
-            return;
-        }
+        if (urls is null)
+            return new List<string>();
 
-        dto.FotosUrls = dto.FotosUrls
+        return urls
             .Select(url => url.Trim())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();

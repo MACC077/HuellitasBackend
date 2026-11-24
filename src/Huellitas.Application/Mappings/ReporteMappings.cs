@@ -25,6 +25,19 @@ public static class ReporteMappings
         };
     }
 
+    public static ReportesCiudadano ToDatosActualizados(this ActualizarReporteDTO dto)
+    {
+        return new ReportesCiudadano
+        {
+            Tipo = dto.Tipo,
+            Descripcion = dto.Descripcion.Trim(),
+            Ubicacion_Latitud = dto.Latitud,
+            Ubicacion_Longitud = dto.Longitud,
+            Ubicacion_Direccion = string.IsNullOrWhiteSpace(dto.Direccion) ? null : dto.Direccion.Trim(),
+            Ubicacion_PuntoReferencia = string.IsNullOrWhiteSpace(dto.PuntoReferencia) ? null : dto.PuntoReferencia.Trim()
+        };
+    }
+
     public static ReporteResumenDTO ToResumenDto(this ReportesCiudadano reporte, int refugioId)
     {
         return new ReporteResumenDTO

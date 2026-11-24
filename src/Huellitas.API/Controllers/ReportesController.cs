@@ -125,6 +125,63 @@ public class ReportesController : ControllerBase
     }
 
     /// <summary>
+    /// Actualizar los datos editables de un reporte (solo administrador).
+    /// </summary>
+    /// <remarks>
+    /// Permite corregir tipo, descripción, ubicación y fotografías. No modifica el estado,
+    /// el refugio asignado, el reportante ni la mascota vinculada, porque tienen su propio
+    /// flujo. Si se envían fotografías, reemplazan a las actuales; si la lista llega vacía,
+    /// se conservan las existentes.
+    /// </remarks>
+    /// <response code="200">Reporte actualizado.</response>
+    /// <response code="400">Datos inválidos.</response>
+    /// <response code="404">El reporte no existe o fue eliminado.</response>
+    /// <response code="409">El reporte ya fue convertido en mascota.</response>
+    [HttpPut("{id:int}", Name = "ActualizarReporte")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Actualizar(int id, [FromBody] ActualizarReporteDTO dto)
+    {
+        await _reporteService.ActualizarReporteAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = "Reporte actualizado." });
+    }
+
+    /// <summary>
+    /// Eliminar lógicamente un reporte.
+    /// </summary>
+    /// <remarks>
+    /// El reporte deja de aparecer en la bandeja, el mapa y las consultas, pero se conserva
+    /// en la base de datos. Un administrador puede eliminar cualquier reporte; el reportante
+    /// autenticado solo el suyo mientras siga en estado Recibido y sin refugio asignado.
+    /// Los reportes convertidos en mascota no se pueden eliminar.
+    /// </remarks>
+    /// <param name="id">ID del reporte.</param>
+    /// <param name="motivo">Motivo opcional del borrado; queda registrado en el historial.</param>
+    /// <response code="200">Reporte eliminado.</response>
+    /// <response code="403">El usuario no es el reportante ni un administrador.</response>
+    /// <response code="404">El reporte no existe o ya fue eliminado.</response>
+    /// <response code="409">El reporte está en atención o ya fue convertido en mascota.</response>
+    [HttpDelete("{id:int}", Name = "EliminarReporte")]
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Eliminar(int id, [FromQuery] string? motivo)
+    {
+        await _reporteService.EliminarReporteAsync(
+            id,
+            motivo,
+            User.GetUserId(),
+            User.IsInRole("Administrador"));
+
+        return Ok(new { mensaje = "Reporte eliminado." });
+    }
+
+    /// <summary>
     /// Convertir un reporte rescatado en una ficha de mascota del refugio autenticado.
     /// </summary>
     /// <response code="201">Mascota creada y vinculada al reporte.</response>

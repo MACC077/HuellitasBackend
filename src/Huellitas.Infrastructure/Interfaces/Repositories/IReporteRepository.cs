@@ -67,4 +67,26 @@ public interface IReporteRepository
         int refugioId,
         int mascotaId,
         CambiosDeEstado cambio);
+
+    /// <summary>
+    /// Marca el reporte como inactivo (borrado lógico) y registra el evento
+    /// en el historial dentro de la misma transacción. Las condiciones opcionales
+    /// evitan borrar un reporte que acaba de ser tomado o convertido en mascota.
+    /// </summary>
+    Task<bool> EliminarAsync(
+        int reporteId,
+        byte? estadoEsperado,
+        bool exigirSinRefugio,
+        CambiosDeEstado cambio);
+
+    /// <summary>
+    /// Actualiza los datos editables del reporte activo y sin mascota vinculada.
+    /// Si <paramref name="fotos"/> no es null, reemplaza las fotografías activas.
+    /// Registra el historial en la misma transacción.
+    /// </summary>
+    Task<bool> ActualizarAsync(
+        int reporteId,
+        ReportesCiudadano cambios,
+        IEnumerable<ReporteMultimedia>? fotos,
+        CambiosDeEstado cambio);
 }

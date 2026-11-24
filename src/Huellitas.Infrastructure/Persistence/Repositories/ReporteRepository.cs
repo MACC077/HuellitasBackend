@@ -261,6 +261,107 @@ public class ReporteRepository : IReporteRepository
         }
     }
 
+    public async Task<bool> EliminarAsync(
+        int reporteId,
+        byte? estadoEsperado,
+        bool exigirSinRefugio,
+        CambiosDeEstado cambio)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var consulta = _context.ReportesCiudadanos
+                .Where(r => r.ReporteId == reporteId &&
+                            r.Activo &&
+                            r.MascotaId == null);
+
+            // El reportante solo puede borrar mientras el reporte siga sin atención.
+            if (estadoEsperado.HasValue)
+                consulta = consulta.Where(r => r.Estado == estadoEsperado.Value);
+
+            if (exigirSinRefugio)
+                consulta = consulta.Where(r => r.RefugioId == null);
+
+            var filasAfectadas = await consulta
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(r => r.Activo, false)
+                    .SetProperty(r => r.FechaModificacion, (DateTime?)cambio.FechaCreacion));
+
+            if (filasAfectadas == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            _context.CambiosDeEstados.Add(cambio);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
+    public async Task<bool> ActualizarAsync(
+        int reporteId,
+        ReportesCiudadano cambios,
+        IEnumerable<ReporteMultimedia>? fotos,
+        CambiosDeEstado cambio)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var filasAfectadas = await _context.ReportesCiudadanos
+                .Where(r => r.ReporteId == reporteId &&
+                            r.Activo &&
+                            r.MascotaId == null)
+                .ExecuteUpdateAsync(setters => setters
+                    .SetProperty(r => r.Tipo, cambios.Tipo)
+                    .SetProperty(r => r.Descripcion, cambios.Descripcion)
+                    .SetProperty(r => r.Ubicacion_Latitud, cambios.Ubicacion_Latitud)
+                    .SetProperty(r => r.Ubicacion_Longitud, cambios.Ubicacion_Longitud)
+                    .SetProperty(r => r.Ubicacion_Direccion, cambios.Ubicacion_Direccion)
+                    .SetProperty(r => r.Ubicacion_PuntoReferencia, cambios.Ubicacion_PuntoReferencia)
+                    .SetProperty(r => r.FechaModificacion, (DateTime?)cambio.FechaCreacion));
+
+            if (filasAfectadas == 0)
+            {
+                await transaction.RollbackAsync();
+                return false;
+            }
+
+            // Si el llamador envía fotografías, se reemplazan lógicamente las actuales.
+            if (fotos is not null)
+            {
+                await _context.ReporteMultimedia
+                    .Where(f => f.ReporteId == reporteId && f.Activo)
+                    .ExecuteUpdateAsync(setters => setters
+                        .SetProperty(f => f.Activo, false));
+
+                foreach (var foto in fotos)
+                {
+                    foto.ReporteId = reporteId;
+                    _context.ReporteMultimedia.Add(foto);
+                }
+            }
+
+            _context.CambiosDeEstados.Add(cambio);
+            await _context.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
     private static string GenerarNumeroTemporal()
     {
         // "TMP-" + 16 caracteres = 20, el máximo permitido por la columna.

@@ -12,4 +12,6 @@ public interface IReporteService
     Task CambiarEstadoAsync(int reporteId, CambiarEstadoReporteDTO dto, int usuarioId, bool esAdmin);
     Task<int> ConvertirAFichaMascotaAsync(int reporteId, ConvertirMascotaDTO dto, int usuarioId);
     Task<IEnumerable<ReporteMapaDTO>> ObtenerReportesMapaAsync();
+    Task ActualizarReporteAsync(int reporteId, ActualizarReporteDTO dto, int usuarioId);
+    Task EliminarReporteAsync(int reporteId, string? motivo, int usuarioId, bool esAdmin);
 }
