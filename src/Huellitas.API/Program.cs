@@ -1,4 +1,5 @@
 using Asp.Versioning;
+using Huellitas.API.Extensions;
 using Huellitas.API.Handlers;
 using Huellitas.Application;
 using Huellitas.Infrastructure;
@@ -14,6 +15,9 @@ var builder = WebApplication.CreateBuilder(args);
 //DI Capas App e Infrastructure
 builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
+
+//Rate limiting (solo reporte ciudadano anónimo)
+builder.Services.AddHuellitasRateLimiting(builder.Configuration);
 
 //JWT Bearer
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -129,6 +133,7 @@ else
 }
 
 app.UseHttpsRedirection();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
