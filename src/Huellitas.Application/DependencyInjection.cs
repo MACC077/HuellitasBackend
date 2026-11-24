@@ -28,6 +28,7 @@ public static class DependencyInjection
         services.AddScoped<ITrazabilidadService, TrazabilidadService>();
         services.AddScoped<INotificacionService, NotificacionService>();
         services.AddScoped<ISeguimientoService, SeguimientoService>();
+        services.AddScoped<IReporteService, ReporteService>();
         return services;
     }
 }

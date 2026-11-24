@@ -7,7 +7,7 @@ public partial class ReportesCiudadano
 {
     public int ReporteId { get; set; }
 
-    public int UsuarioId { get; set; }
+    public int? UsuarioId { get; set; }
 
     public int? RefugioId { get; set; }
 
@@ -43,7 +43,9 @@ public partial class ReportesCiudadano
 
     public virtual ICollection<Multimedia> Multimedia { get; set; } = new List<Multimedia>();
 
+    public virtual ICollection<ReporteMultimedia> Fotos { get; set; } = new List<ReporteMultimedia>();
+
     public virtual Refugios? Refugio { get; set; }
 
-    public virtual Usuarios Usuario { get; set; } = null!;
+    public virtual Usuarios? Usuario { get; set; }
 }

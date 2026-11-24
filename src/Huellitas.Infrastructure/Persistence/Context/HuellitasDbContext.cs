@@ -65,6 +65,8 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<ReportesCiudadano> ReportesCiudadanos { get; set; }
 
+    public virtual DbSet<ReporteMultimedia> ReporteMultimedia { get; set; }
+
     public virtual DbSet<RequisitosAdopcion> RequisitosAdopcions { get; set; }
 
     public virtual DbSet<Roles> Roles { get; set; }
@@ -502,8 +504,23 @@ public partial class HuellitasDbContext : DbContext
 
             entity.HasOne(d => d.Usuario).WithMany(p => p.ReportesCiudadanos)
                 .HasForeignKey(d => d.UsuarioId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Reportes_Usuarios");
+        });
+
+        modelBuilder.Entity<ReporteMultimedia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.ToTable("ReporteMultimedia");
+
+            entity.Property(e => e.RutaArchivo).HasMaxLength(400);
+
+            entity.HasOne(d => d.Reporte).WithMany(p => p.Fotos)
+                .HasForeignKey(d => d.ReporteId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_ReporteMultimedia_Reportes");
         });
 
         modelBuilder.Entity<RequisitosAdopcion>(entity =>
