@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<INotificacionService, NotificacionService>();
         services.AddScoped<ISeguimientoService, SeguimientoService>();
         services.AddScoped<IReporteService, ReporteService>();
+        services.AddScoped<IAdminService, AdminService>();
         return services;
     }
 }
