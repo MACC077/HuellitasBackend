@@ -1,8 +1,9 @@
-﻿namespace Huellitas.Application.DTOs.Usuarios;
+namespace Huellitas.Application.DTOs.Usuarios;
 
 public class UsuarioPerfilDTO
 {
     public int Id { get; set; }
+    public int? RefugioId { get; set; }
     public string Nombre { get; set; } = string.Empty;
     public string Correo { get; set; } = string.Empty;
     public string? Telefono { get; set; }

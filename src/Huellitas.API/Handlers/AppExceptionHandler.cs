@@ -34,7 +34,8 @@ public class AppExceptionHandler : IExceptionHandler
             return true;   // ← manejada
         }
 
-        // No es una AppException → dejamos que otro handler o el default la maneje
+        // No es una AppException → registramos y dejamos que el handler por defecto la procese
+        _logger.LogError(exception, "Excepción no controlada en {Path}", httpContext.Request.Path);
         return false;
     }
 }

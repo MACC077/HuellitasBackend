@@ -56,6 +56,59 @@ public class UsuarioRepository : IUsuarioRepository
         return politica?.PoliticaId ?? 0;
     }
 
+    public async Task<PoliticasDato?> ObtenerPoliticaActivaAsync()
+    {
+        return await _context.PoliticasDatos
+            .AsNoTracking()
+            .Where(p => p.Activo)
+            .OrderByDescending(p => p.FechaPublicacion)
+            .FirstOrDefaultAsync();
+    }
+
+    public async Task<PoliticasDato?> ObtenerPoliticaPorIdAsync(int politicaId)
+    {
+        return await _context.PoliticasDatos
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.PoliticaId == politicaId);
+    }
+
+    public async Task<IEnumerable<PoliticasDato>> ObtenerPoliticasAsync()
+    {
+        return await _context.PoliticasDatos
+            .AsNoTracking()
+            .OrderByDescending(p => p.FechaPublicacion)
+            .ThenByDescending(p => p.PoliticaId)
+            .ToListAsync();
+    }
+
+    public async Task InsertarPoliticaAsync(PoliticasDato politica)
+    {
+        _context.PoliticasDatos.Add(politica);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task DesactivarPoliticasActivasAsync()
+    {
+        await _context.PoliticasDatos
+            .Where(p => p.Activo)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(p => p.Activo, false));
+    }
+
+    public async Task<bool> HaAceptadoPoliticaAsync(int usuarioId, int politicaId)
+    {
+        return await _context.ConsentimientosDatos.AnyAsync(c =>
+            c.UsuarioId == usuarioId &&
+            c.PoliticaId == politicaId &&
+            c.Activo);
+    }
+
+    public async Task DesactivarConsentimientosActivosAsync(int usuarioId)
+    {
+        await _context.ConsentimientosDatos
+            .Where(c => c.UsuarioId == usuarioId && c.Activo)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(c => c.Activo, false));
+    }
+
     public async Task InsertarTokenAsync(TokensSeguridad token)
     {
         _context.TokensSeguridad.Add(token);
@@ -109,5 +162,11 @@ public class UsuarioRepository : IUsuarioRepository
             .Include(u => u.ConsentimientosDatos)
             .ThenInclude(c => c.Politica)
             .FirstOrDefaultAsync(u => u.UsuarioId == usuarioId);
+    }
+
+    public async Task<Usuarios?> ObtenerPorRefugioIdAsync(int refugioId)
+    {
+        return await _context.Usuarios
+            .FirstOrDefaultAsync(u => u.RefugioId == refugioId && u.Activo);
     }
 }

@@ -3,6 +3,7 @@ using Huellitas.Application.Common.Exceptions;
 using Huellitas.Application.DTOs.Mascotas;
 using Huellitas.Application.Interfaces.Services;
 using Huellitas.Application.Mappings;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Entities;
 
@@ -12,11 +13,19 @@ public class MascotaService : IMascotaService
 {
     private readonly IMascotaRepository _mascotaRepo;
     private readonly IRefugioRepository _refugioRepo;
+    private readonly IRegistroClinicoRepository _registroClinicoRepo;
+    private readonly ITrazabilidadRepository _trazabilidadRepo;
 
-    public MascotaService(IMascotaRepository mascotaRepo, IRefugioRepository refugioRepo)
+    public MascotaService(
+        IMascotaRepository mascotaRepo,
+        IRefugioRepository refugioRepo,
+        IRegistroClinicoRepository registroClinicoRepo,
+        ITrazabilidadRepository trazabilidadRepo)
     {
         _mascotaRepo = mascotaRepo;
         _refugioRepo = refugioRepo;
+        _registroClinicoRepo = registroClinicoRepo;
+        _trazabilidadRepo = trazabilidadRepo;
     }
 
     public async Task<int> RegistrarAsync(CrearMascotaDTO dto, int usuarioId)
@@ -31,7 +40,7 @@ public class MascotaService : IMascotaService
         var mascota = dto.ToEntity();
 
         mascota.RefugioId = refugio.RefugioId;
-        mascota.Estado = 0; // Disponible
+        mascota.Estado = (byte)EstadoMascota.Disponible;
         mascota.FechaIngreso = DateOnly.FromDateTime(DateTime.Now);
         mascota.FechaUltimaActualizacion = DateTime.Now;
         mascota.Activo = true;
@@ -55,10 +64,10 @@ public class MascotaService : IMascotaService
             esPrimera = false;
         }
 
-        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
-            Tipo = 0,
+            Tipo = (byte)TipoBitacora.Ingreso,
             Descripcion = "Mascota registrada en el sistema.",
             FechaCreacion = DateTime.Now
         });
@@ -101,20 +110,20 @@ public class MascotaService : IMascotaService
     {
         var mascota = await ValidarRefugioAsync(mascotaId, usuarioId);
 
-        if (dto.NuevoEstado == 3 && string.IsNullOrWhiteSpace(dto.Motivo))
+        if (dto.NuevoEstado == (byte)EstadoMascota.NoDisponible && string.IsNullOrWhiteSpace(dto.Motivo))
             throw AppException.BadRequest("El motivo es obligatorio al marcar como No Disponible.");
 
         byte estadoAnterior = mascota.Estado;
         mascota.Estado = dto.NuevoEstado;
-        mascota.MotivoBaja = dto.NuevoEstado == 3 ? dto.Motivo : null;
+        mascota.MotivoBaja = dto.NuevoEstado == (byte)EstadoMascota.NoDisponible ? dto.Motivo : null;
         mascota.FechaUltimaActualizacion = DateTime.Now;
 
         await _mascotaRepo.ActualizarAsync(mascota);
 
-        await _mascotaRepo.InsertarBitacoraAsync(new Bitacoras
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
         {
             MascotaId = mascota.MascotaId,
-            Tipo = 1, // Cambio de estado
+            Tipo = (byte)TipoBitacora.CambioEstado,
             Descripcion = $"Estado cambiado de {estadoAnterior} a {dto.NuevoEstado}. Motivo: {dto.Motivo ?? "N/A"}",
             FechaCreacion = DateTime.Now
         });
@@ -128,7 +137,7 @@ public class MascotaService : IMascotaService
             throw AppException.Conflict("No se puede dar de baja la mascota porque tiene solicitudes activas.");
 
         mascota.Activo = false;
-        mascota.Estado = 3; // No Disponible
+        mascota.Estado = (byte)EstadoMascota.NoDisponible; 
         mascota.MotivoBaja = motivo;
         mascota.FechaUltimaActualizacion = DateTime.Now;
 
@@ -185,11 +194,109 @@ public class MascotaService : IMascotaService
         };
     }
 
-    public async Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId)
+    public async Task<MascotaDetalleDTO> ObtenerDetalleAsync(int mascotaId, int usuarioId, bool esAdmin)
+    {
+        var mascota = await _mascotaRepo.ObtenerDetallePublicoAsync(mascotaId)
+         ?? throw AppException.NotFound("La mascota no existe.");
+
+        // Validamos si el usuario tiene permiso para verla
+        await ValidarAccesoAMascotaAsync(mascota, usuarioId, esAdmin);
+
+        return mascota.ToDetalleDto();
+    }
+
+    private async Task ValidarAccesoAMascotaAsync(Mascotas mascota, int usuarioId, bool esAdmin)
+    {
+        //Si está disponible o en proceso, todos pueden verla
+        if (mascota.Estado == (byte)EstadoMascota.Disponible ||
+            mascota.Estado == (byte)EstadoMascota.EnProceso)
+        {
+            return;
+        }
+
+        //Si es Administrador, siempre puede verla
+        if (esAdmin)
+        {
+            return;
+        }
+
+        //Si es un usuario logueado, verificamos si es el refugio dueño
+        if (usuarioId > 0)
+        {
+            var refugio = await _refugioRepo.ObtenerPorUsuarioIdAsync(usuarioId);
+            if (refugio != null && mascota.RefugioId == refugio.RefugioId)
+            {
+                return;
+            }
+        }
+
+        //Si no cumple ninguna de las condiciones, lanzamos 404 
+        // (Usamos 404 en lugar de 403 para no revelar que la mascota existe)
+        throw AppException.NotFound("La mascota no está disponible.");
+    }
+
+    public async Task AgregarRegistroClinicoAsync(int mascotaId, CrearRegistroClinicoDTO dto, int usuarioId)
+    {
+        // Reutilizamos tu método existente (ValidarRefugioAsync)
+        var mascota = await ValidarRefugioAsync(mascotaId, usuarioId);
+
+        // Crear el registro usando el nombre correcto de la entidad
+        var registro = new RegistrosClinico
+        {
+            MascotaId = mascotaId,
+            Tipo = dto.Tipo,
+            Fecha = dto.Fecha,
+            Descripcion = dto.Descripcion,
+            SoporteVeterinario = dto.SoporteVeterinario,
+            Activo = true,
+            FechaCreacion = DateTime.Now
+        };
+
+        await _registroClinicoRepo.InsertarAsync(registro);
+
+        // 3. Registrar en la bitácora
+        await _trazabilidadRepo.InsertarBitacoraAsync(new Bitacoras
+        {
+            MascotaId = mascotaId,
+            Tipo = (byte)TipoBitacora.AtencionClinica,
+            Descripcion = $"Registro clínico agregado: {((TipoRegistroClinico)dto.Tipo).ToString()}",
+            FechaCreacion = DateTime.Now
+        });
+    }
+
+    public async Task<PagedResult<RegistroClinicoDTO>> ObtenerHistorialClinicoAsync(int mascotaId, int pagina, int tamano)
+    {
+        // Validamos que la mascota exista
+        _ = await _mascotaRepo.ObtenerPorIdAsync(mascotaId)
+            ?? throw AppException.NotFound("Mascota no encontrada.");
+
+        // Traemos los datos paginados desde el repositorio
+        var (items, total) = await _registroClinicoRepo.ObtenerPorMascotaAsync(mascotaId, pagina, tamano);
+
+        // Retornamos el PagedResult mapeado a DTOs
+        return new PagedResult<RegistroClinicoDTO>
+        {
+            Items = items.Select(r => r.ToDto()).ToList(),
+            Pagina = pagina,
+            TamanoPagina = tamano,
+            TotalRegistros = total
+        };
+    }
+
+    public async Task<CompartirMascotaDTO> ObtenerDatosParaCompartirAsync(int mascotaId, string baseUrlFrontend)
     {
         var mascota = await _mascotaRepo.ObtenerDetallePublicoAsync(mascotaId)
             ?? throw AppException.NotFound("La mascota no existe o no está disponible.");
 
-        return mascota.ToDetalleDto();
+        var fotoPrincipal = mascota.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo
+            ?? "https://res.cloudinary.com/demo/image/upload/v1312461204/sample.jpg"; // Fallback
+
+        return new CompartirMascotaDTO
+        {
+            Titulo = $"¡Conoce a {mascota.Nombre} en Huellitas!",
+            Descripcion = $"Es un(a) {mascota.Especie?.Nombre} {(string.IsNullOrEmpty(mascota.Raza?.Nombre) ? "" : $"de raza {mascota.Raza.Nombre}")} que busca un hogar. ¡Ayúdanos a encontrar a su familia!",
+            ImagenUrl = fotoPrincipal,
+            UrlFicha = $"{baseUrlFrontend.TrimEnd('/')}/mascotas/{mascota.MascotaId}" // URL que abrirá el frontend
+        };
     }
 }

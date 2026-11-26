@@ -47,6 +47,8 @@ public partial class Refugios
 
     public virtual ICollection<RequisitosAdopcion> RequisitosAdopcions { get; set; } = new List<RequisitosAdopcion>();
 
+    public virtual ICollection<RefugioSoportes> Soportes { get; set; } = new List<RefugioSoportes>();
+
     public virtual ICollection<Usuarios> Usuarios { get; set; } = new List<Usuarios>();
 
     public virtual Usuarios? VerificadoPor { get; set; }

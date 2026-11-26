@@ -1,4 +1,5 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using Huellitas.Infrastructure.Enums;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -77,11 +78,13 @@ public class MascotaRepository : IMascotaRepository
     public async Task<(IEnumerable<Mascotas> Items, int Total)> ObtenerCatalogoPublicoAsync(int pagina, int tamano, int? especieId, int? tamanoId, byte? sexo)
     {
         var query = _context.Mascotas
-            .Include(m => m.Especie)
-            .Include(m => m.Raza)
-            .Include(m => m.Multimedia)
-            .Where(m => m.Activo && m.Estado == 0)
-            .AsQueryable();
+       .Include(m => m.Especie)
+       .Include(m => m.Raza)
+       .Include(m => m.Multimedia)
+       .Where(m => m.Activo &&
+                  (m.Estado == (byte)EstadoMascota.Disponible ||
+                   m.Estado == (byte)EstadoMascota.EnProceso))
+       .AsQueryable();
 
         // Aplicar filtros
         if (especieId.HasValue)
@@ -106,13 +109,27 @@ public class MascotaRepository : IMascotaRepository
 
     public async Task<Mascotas?> ObtenerDetallePublicoAsync(int mascotaId)
     {
+        
         return await _context.Mascotas
-        .Include(m => m.Especie)
-        .Include(m => m.Raza)
-        .Include(m => m.Refugio) // 👈 Traemos los datos del refugio
-        .Include(m => m.Multimedia)
-        .FirstOrDefaultAsync(m => m.MascotaId == mascotaId && m.Activo);
-        // Nota: Permitimos ver el detalle aunque esté "En Proceso", 
-        // para que el adoptante que ya aplicó pueda seguir viéndola.
+         .Include(m => m.Especie)
+         .Include(m => m.Raza)
+         .Include(m => m.Refugio)
+         .Include(m => m.Multimedia)
+         .FirstOrDefaultAsync(m => m.MascotaId == mascotaId && m.Activo);
+
+    }
+
+    public async Task<IEnumerable<Mascotas>> ObtenerMuestraMascotasDisponiblesAsync(int limiteMuestra = 50)
+    {
+        return await _context.Mascotas
+            .Include(m => m.Especie)
+            .Include(m => m.Raza)
+            .Include(m => m.Tamano)
+            .Include(m => m.Temperamentos)
+            .Include(m => m.Multimedia)
+            .Where(m => m.Activo && (m.Estado == (byte)EstadoMascota.Disponible || m.Estado == (byte)EstadoMascota.EnProceso))
+            .OrderBy(m => EF.Functions.Random()) // Muestreo aleatorio en SQL Server (ORDER BY NEWID())
+            .Take(limiteMuestra)
+            .ToListAsync();
     }
 }

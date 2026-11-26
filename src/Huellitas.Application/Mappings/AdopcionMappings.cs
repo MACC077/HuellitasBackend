@@ -32,4 +32,60 @@ public static class AdopcionMappings
             Estado = "Enviada" // Al ser recién creada, siempre es Enviada
         };
     }
+
+
+    public static SolicitudResumenDTO ToResumenDto(this SolicitudesAdopcion s)
+    {
+        return new SolicitudResumenDTO
+        {
+            SolicitudId = s.SolicitudId,
+            AdopcionId = s.Adopciones?.FirstOrDefault()?.AdopcionId,
+            RefugioId = s.Mascota?.RefugioId,
+            MascotaId = s.MascotaId,
+            Codigo = s.Codigo,
+            MascotaNombre = s.Mascota?.Nombre ?? "",
+            MascotaFoto = s.Mascota?.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo,
+            AdoptanteNombre = s.Usuario?.Nombre ?? "",
+            FechaEnvio = s.FechaEnvio,
+            Estado = s.Estado switch
+            {
+                0 => "Enviada",
+                1 => "En Revisión",
+                2 => "Entrevista",
+                3 => "Aprobada",
+                4 => "Rechazada",
+                5 => "Finalizada",
+                6 => "Cancelada",
+                7 => "Cerrada",
+                _ => "Desconocido"
+            }
+        };
+    }
+
+    public static VisitaResumenDTO ToVisitaDto(this VisitasEntrevista v)
+    {
+        return new VisitaResumenDTO
+        {
+            VisitaId = v.VisitaId,
+            SolicitudId = v.SolicitudId,
+            MascotaNombre = v.Solicitud?.Mascota?.Nombre ?? "",
+            AdoptanteNombre = v.Solicitud?.Usuario?.Nombre ?? "",
+            RefugioNombre = v.Solicitud?.Mascota?.Refugio?.Nombre ?? "",
+            Fecha = v.Fecha,
+            Modalidad = v.Modalidad switch
+            {
+                0 => "Presencial",
+                1 => "Virtual",
+                _ => "Desconocida"
+            },
+            Estado = v.Estado switch
+            {
+                0 => "Propuesta",
+                1 => "Confirmada",
+                2 => "Reprogramada",
+                3 => "Realizada",
+                _ => "Desconocido"
+            }
+        };
+    }
 }

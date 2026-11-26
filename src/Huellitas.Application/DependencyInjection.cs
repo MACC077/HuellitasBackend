@@ -18,6 +18,20 @@ public static class DependencyInjection
         services.AddScoped<IUsuarioService, UsuarioService>();
         services.AddScoped<IMascotaService, MascotaService>();
         services.AddScoped<IAdopcionService, AdopcionService>();
+        services.AddScoped<IArchivoService, ArchivoService>();
+        services.AddScoped<IRefugioService, RefugioService>();
+        services.AddScoped<IFavoritoService, FavoritoService>();
+        services.AddScoped<IMatchService, MatchService>();
+        services.AddScoped<ICalificacionService, CalificacionService>();
+        services.AddScoped<INecesidadService, NecesidadService>();
+        services.AddScoped<IApadrinamientoService, ApadrinamientoService>();
+        services.AddScoped<ITrazabilidadService, TrazabilidadService>();
+        services.AddScoped<INotificacionService, NotificacionService>();
+        services.AddScoped<ISeguimientoService, SeguimientoService>();
+        services.AddScoped<IReporteService, ReporteService>();
+        services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IDenunciaService, DenunciaService>();
+        services.AddScoped<IPoliticaService, PoliticaService>();
         return services;
     }
 }

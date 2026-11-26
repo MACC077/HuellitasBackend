@@ -13,4 +13,5 @@ public interface IAutenticacionService
     Task LogoutAsync(string refreshToken);
     Task SolicitarRecuperacionAsync(string correo);
     Task RestablecerContrasenaAsync(string token, string nuevaContrasena);
+    Task<int> RegistrarRefugioAsync(RegistroRefugioPublicoDTO dto);
 }

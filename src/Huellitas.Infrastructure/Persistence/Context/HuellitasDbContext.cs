@@ -59,11 +59,15 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<Refugios> Refugios { get; set; }
 
+    public virtual DbSet<RefugioSoportes> RefugioSoportes { get; set; }
+
     public virtual DbSet<RegistrosAuditorias> RegistrosAuditoria { get; set; }
 
     public virtual DbSet<RegistrosClinico> RegistrosClinicos { get; set; }
 
     public virtual DbSet<ReportesCiudadano> ReportesCiudadanos { get; set; }
+
+    public virtual DbSet<ReporteMultimedia> ReporteMultimedia { get; set; }
 
     public virtual DbSet<RequisitosAdopcion> RequisitosAdopcions { get; set; }
 
@@ -449,6 +453,22 @@ public partial class HuellitasDbContext : DbContext
                 .HasConstraintName("FK_Refugios_VerificadoPor");
         });
 
+        modelBuilder.Entity<RefugioSoportes>(entity =>
+        {
+            entity.HasKey(e => e.SoporteId);
+
+            entity.ToTable("RefugioSoportes");
+
+            entity.Property(e => e.Archivo).HasMaxLength(800);
+            entity.Property(e => e.FechaCarga).HasPrecision(0);
+            entity.Property(e => e.Tipo).HasMaxLength(40);
+
+            entity.HasOne(d => d.Refugio).WithMany(p => p.Soportes)
+                .HasForeignKey(d => d.RefugioId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RefugioSoportes_Refugios");
+        });
+
         modelBuilder.Entity<RegistrosAuditorias>(entity =>
         {
             entity.HasKey(e => e.AuditoriaId);
@@ -502,8 +522,23 @@ public partial class HuellitasDbContext : DbContext
 
             entity.HasOne(d => d.Usuario).WithMany(p => p.ReportesCiudadanos)
                 .HasForeignKey(d => d.UsuarioId)
+                .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Reportes_Usuarios");
+        });
+
+        modelBuilder.Entity<ReporteMultimedia>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.ToTable("ReporteMultimedia");
+
+            entity.Property(e => e.RutaArchivo).HasMaxLength(400);
+
+            entity.HasOne(d => d.Reporte).WithMany(p => p.Fotos)
+                .HasForeignKey(d => d.ReporteId)
+                .OnDelete(DeleteBehavior.NoAction)
+                .HasConstraintName("FK_ReporteMultimedia_Reportes");
         });
 
         modelBuilder.Entity<RequisitosAdopcion>(entity =>

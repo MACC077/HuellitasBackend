@@ -1,4 +1,5 @@
-﻿using Huellitas.Application.DTOs.Mascotas;
+using Huellitas.Application.DTOs.Mascotas;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Persistence.Entities;
 
 namespace Huellitas.Application.Mappings;
@@ -79,6 +80,10 @@ public static class MascotaMappings
             Id = m.MascotaId,
             Nombre = m.Nombre,
             Especie = m.Especie?.Nombre ?? "",
+            EspecieId = m.EspecieId,
+            RazaId = m.RazaId,
+            TamanoId = m.TamanoId,
+            ColorId = m.ColorId,
             Raza = m.Raza?.Nombre,
             Sexo = m.Sexo == 0 ? "Macho" : "Hembra",
             EdadAproximada = m.EdadAproximada ?? 0,
@@ -91,10 +96,23 @@ public static class MascotaMappings
                 2 => "Adoptada",
                 _ => "No Disponible"
             },
+            RefugioId = m.RefugioId,
             Refugio = m.Refugio?.Nombre ?? "Refugio no asignado",
             RefugioTelefono = m.Refugio?.Telefono,
             // Ordenamos para que la foto principal aparezca de primera en el array
             Fotos = m.Multimedia?.OrderByDescending(f => f.EsPrincipal).Select(f => f.Archivo).ToList() ?? new()
+        };
+    }
+
+    public static RegistroClinicoDTO ToDto(this RegistrosClinico r)
+    {
+        return new RegistroClinicoDTO
+        {
+            RegistroClinicoId = r.RegistroClinicoId,
+            Tipo = ((TipoRegistroClinico)r.Tipo).ToString(),
+            Fecha = r.Fecha,
+            Descripcion = r.Descripcion ?? string.Empty,
+            SoporteVeterinario = r.SoporteVeterinario
         };
     }
 }

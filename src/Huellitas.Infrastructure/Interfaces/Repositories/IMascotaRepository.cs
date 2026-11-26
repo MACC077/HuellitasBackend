@@ -16,4 +16,5 @@ public interface IMascotaRepository
     Task EliminarMultimediaAsync(int mascotaId); // Para actualizar fotos
     Task<(IEnumerable<Mascotas> Items, int Total)> ObtenerCatalogoPublicoAsync(int pagina, int tamano, int? especieId, int? tamanoId, byte? sexo);
     Task<Mascotas?> ObtenerDetallePublicoAsync(int mascotaId);
+    Task<IEnumerable<Mascotas>> ObtenerMuestraMascotasDisponiblesAsync(int limiteMuestra = 50);
 }

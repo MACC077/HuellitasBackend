@@ -1,4 +1,6 @@
-﻿using Huellitas.Infrastructure.Interfaces.Repositories;
+﻿using CloudinaryDotNet;
+using Huellitas.Infrastructure.Extensions;
+using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Interfaces.Services;
 using Huellitas.Infrastructure.Persistence.Context;
 using Huellitas.Infrastructure.Persistence.Repositories;
@@ -23,10 +25,24 @@ public static class DependencyInjection
         services.AddScoped<IRefugioRepository, RefugioRepository>();
         services.AddScoped<IMascotaRepository, MascotaRepository>();
         services.AddScoped<ISolicitudAdopcionRepository, SolicitudAdopcionRepository>();
+        services.AddScoped<IRegistroClinicoRepository, RegistroClinicoRepository>();
+        services.AddScoped<IFavoritoRepository, FavoritoRepository>();
+        services.AddScoped<ICalificacionRepository, CalificacionRepository>();
+        services.AddScoped<INecesidadRepository, NecesidadRepository>();
+        services.AddScoped<IApadrinamientoRepository, ApadrinamientoRepository>();
+        services.AddScoped<ITrazabilidadRepository, TrazabilidadRepository>();
+        services.AddScoped<INotificacionRepository, NotificacionRepository>();
+        services.AddScoped<ISeguimientoRepository, SeguimientoRepository>();
+        services.AddScoped<IReporteRepository, ReporteRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
+        services.AddScoped<IDenunciaRepository, DenunciaRepository>();
         // Servicios
         services.AddScoped<IHashContrasena, HashContrasena>();
         services.AddScoped<ICorreoService, CorreoService>();
         services.AddScoped<ITokenService, TokenService>();
+        services.AddScoped<IPdfService, PdfService>();
+        services.AddCloudinaryService(config); //Almacenamiento
+        services.AddScoped<IFileStorageService, CloudinaryFileStorageService>();
 
         return services;
     }
