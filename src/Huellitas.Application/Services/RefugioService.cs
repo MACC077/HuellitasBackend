@@ -58,41 +58,106 @@ public class RefugioService : IRefugioService
         await _repo.EliminarRequisitoAsync(requisitoId);
     }
 
-    public async Task VerificarRefugioAsync(int refugioId, VerificarRefugioDTO dto)
+    public async Task VerificarRefugioAsync(int refugioId, VerificarRefugioDTO dto, int adminId)
     {
         var refugio = await _repo.ObtenerPorIdAsync(refugioId)
             ?? throw AppException.NotFound("Refugio no encontrado.");
 
+        var ahora = DateTime.Now;
+
         if (dto.Aprobado)
         {
             refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Verificado;
-            refugio.FechaVerificacion = DateTime.Now;
+            refugio.FechaVerificacion = ahora;
             refugio.MotivoRechazo = null;
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(dto.MotivoRechazo))
-                throw AppException.BadRequest("El motivo de rechazo es obligatorio.");
+            refugio.VerificadoPorId = adminId > 0 ? adminId : null;
+            refugio.FechaModificacion = ahora;
 
-            refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Rechazado; // Rechazado
-            refugio.MotivoRechazo = dto.MotivoRechazo;
+            await _repo.ActualizarAsync(refugio);
+            return;
         }
+
+        if (string.IsNullOrWhiteSpace(dto.MotivoRechazo))
+            throw AppException.BadRequest("El motivo de rechazo es obligatorio.");
+
+        refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Rechazado;
+        refugio.MotivoRechazo = dto.MotivoRechazo.Trim();
+        refugio.FechaVerificacion = ahora;
+        refugio.VerificadoPorId = adminId > 0 ? adminId : null;
+        refugio.FechaModificacion = ahora;
 
         await _repo.ActualizarAsync(refugio);
-        
-        //Logica de Rechazo
+
+        // Solo al rechazar se desvincula al usuario y se le devuelve el rol de Adoptante.
+        // Al aprobar, el usuario debe conservar el refugio y su rol.
         var usuario = await _usuarioRepo.ObtenerPorRefugioIdAsync(refugioId);
         if (usuario != null)
         {
-            // 1. Desvincular el refugio del usuario
             usuario.RefugioId = null;
-            // 2. Devolverle su rol a Adoptante
             usuario.RolId = (int)RolUsuario.Adoptante;
-            usuario.FechaModificacion = DateTime.Now;
+            usuario.FechaModificacion = ahora;
 
             await _usuarioRepo.ActualizarAsync(usuario);
         }
+    }
 
+    public async Task SuspenderRefugioAsync(int refugioId, SuspenderRefugioDTO dto, int adminId)
+    {
+        var refugio = await _repo.ObtenerPorIdAsync(refugioId)
+            ?? throw AppException.NotFound("Refugio no encontrado.");
+
+        var motivo = (dto.Motivo ?? string.Empty).Trim();
+
+        if (motivo.Length == 0)
+            throw AppException.BadRequest("El motivo de suspensión es obligatorio.");
+
+        if (refugio.EstadoVerificacion == (byte)EstadoVerificacionRefugio.Suspendido)
+            throw AppException.Conflict("El refugio ya está suspendido.");
+
+        var ahora = DateTime.Now;
+
+        refugio.EstadoVerificacion = (byte)EstadoVerificacionRefugio.Suspendido;
+        refugio.MotivoRechazo = motivo.Length > 500 ? motivo[..500] : motivo;
+        refugio.FechaVerificacion = ahora;
+        refugio.VerificadoPorId = adminId > 0 ? adminId : null;
+        refugio.FechaModificacion = ahora;
+
+        await _repo.ActualizarAsync(refugio);
+    }
+
+    public async Task<PagedResult<RefugioAdminDTO>> ObtenerRefugiosPendientesAsync(int pagina, int tamano)
+    {
+        var (paginaValida, tamanoValido) = Paginacion.Validar(pagina, tamano);
+
+        var (items, total) = await _repo.ObtenerRefugiosPorEstadoAsync(
+            (byte)EstadoVerificacionRefugio.Pendiente,
+            paginaValida,
+            tamanoValido);
+
+        return new PagedResult<RefugioAdminDTO>
+        {
+            Items = items.Select(r => r.ToAdminDto()).ToList(),
+            Pagina = paginaValida,
+            TamanoPagina = tamanoValido,
+            TotalRegistros = total
+        };
+    }
+
+    public async Task<IEnumerable<RefugioSoporteDTO>> ObtenerSoportesAsync(int refugioId)
+    {
+        var refugio = await _repo.ObtenerPorIdAsync(refugioId)
+            ?? throw AppException.NotFound("Refugio no encontrado.");
+
+        return refugio.Soportes?
+            .Where(s => s.Activo)
+            .OrderBy(s => s.SoporteId)
+            .Select(s => new RefugioSoporteDTO
+            {
+                SoporteId = s.SoporteId,
+                Tipo = s.Tipo,
+                Archivo = s.Archivo,
+                FechaCarga = s.FechaCarga
+            }).ToList() ?? new();
     }
 
     public async Task<PagedResult<RefugioResumenDTO>> ObtenerRefugiosPublicosAsync(int pagina, int tamano)
@@ -127,6 +192,8 @@ public class RefugioService : IRefugioService
         if (await _repo.ExisteNitAsync(dto.Nit))
             throw AppException.Conflict("Ya existe un refugio registrado con este NIT.");
 
+        var soportes = SoportesValidator.Validar(dto.SoportesUrls);
+
         var refugio = new Refugios
         {
             Nombre = dto.Nombre,
@@ -143,6 +210,18 @@ public class RefugioService : IRefugioService
         };
 
         await _repo.InsertarAsync(refugio);
+
+        if (soportes.Count > 0)
+        {
+            await _repo.InsertarSoportesAsync(soportes.Select(url => new RefugioSoportes
+            {
+                RefugioId = refugio.RefugioId,
+                Tipo = SoportesValidator.Tipo(url),
+                Archivo = url,
+                FechaCarga = DateTime.Now,
+                Activo = true
+            }));
+        }
 
         // Asociar el refugio al usuario y cambiar su rol a Refugio
         usuario.RefugioId = refugio.RefugioId;

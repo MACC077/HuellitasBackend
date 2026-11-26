@@ -64,12 +64,46 @@ public class RefugiosController : ControllerBase
     }
 
     /// <summary>HU-REF-01: Verificar o rechazar un refugio (Solo Administrador).</summary>
-    [HttpPatch("{id}/verificar", Name = "VerificarRefugio")]
+    [HttpPatch("{id:int}/verificar", Name = "VerificarRefugio")]
     [Authorize(Roles = "Administrador")]
     public async Task<IActionResult> Verificar(int id, [FromBody] VerificarRefugioDTO dto)
     {
-        await _refugioService.VerificarRefugioAsync(id, dto);
+        await _refugioService.VerificarRefugioAsync(id, dto, User.GetUserId());
         return Ok(new { mensaje = dto.Aprobado ? "Refugio verificado correctamente." : "Refugio rechazado." });
+    }
+
+    /// <summary>ADM-01: Suspender un refugio (Solo Administrador).</summary>
+    [HttpPatch("{id:int}/suspender", Name = "SuspenderRefugio")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Suspender(int id, [FromBody] SuspenderRefugioDTO dto)
+    {
+        await _refugioService.SuspenderRefugioAsync(id, dto, User.GetUserId());
+        return Ok(new { mensaje = "Refugio suspendido." });
+    }
+
+    /// <summary>ADM-01: Listar refugios pendientes de verificación (Solo Administrador).</summary>
+    [HttpGet("pendientes", Name = "GetRefugiosPendientes")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetPendientes([FromQuery] int pagina = 1, [FromQuery] int tamano = 10)
+    {
+        var result = await _refugioService.ObtenerRefugiosPendientesAsync(pagina, tamano);
+        return Ok(result);
+    }
+
+    /// <summary>ADM-01: Consultar los soportes cargados por un refugio (Solo Administrador).</summary>
+    [HttpGet("{id:int}/soportes", Name = "GetSoportesRefugio")]
+    [Authorize(Roles = "Administrador")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetSoportes(int id)
+    {
+        var result = await _refugioService.ObtenerSoportesAsync(id);
+        return Ok(result);
     }
 
     /// <summary>
@@ -87,7 +121,7 @@ public class RefugiosController : ControllerBase
     /// <summary>
     /// HU-REF-02: Obtener el perfil público de un refugio (Público).
     /// </summary>
-    [HttpGet("{id}", Name = "GetPerfilPublicoRefugio")]
+    [HttpGet("{id:int}", Name = "GetPerfilPublicoRefugio")]
     [AllowAnonymous] //Sin token
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

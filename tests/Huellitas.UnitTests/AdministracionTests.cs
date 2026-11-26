@@ -94,6 +94,32 @@ public class AdministracionTests
     }
 
     [Fact]
+    public async Task ObtenerUsuarios_FiltraPorRolYEstado()
+    {
+        var repo = new FakeAdminRepository();
+        repo.AgregarUsuario(2, "Ana", "ana@x.com", RolUsuario.Adoptante, EstadoUsuario.Activo);
+        repo.AgregarUsuario(3, "Beto", "beto@x.com", RolUsuario.Refugio, EstadoUsuario.Desactivado, activo: false);
+        repo.AgregarUsuario(4, "Caro", "caro@x.com", RolUsuario.Refugio, EstadoUsuario.Activo);
+        var service = CrearServicio(repo);
+
+        var resultado = await service.ObtenerUsuariosAsync(
+            1,
+            10,
+            null,
+            (int)RolUsuario.Refugio,
+            (byte)EstadoUsuario.Activo);
+
+        Assert.Single(resultado.Items);
+        Assert.Equal(4, resultado.Items[0].UsuarioId);
+        Assert.Equal(1, resultado.TotalRegistros);
+
+        await Assert.ThrowsAsync<AppException>(() =>
+            service.ObtenerUsuariosAsync(1, 10, null, 99, null));
+        await Assert.ThrowsAsync<AppException>(() =>
+            service.ObtenerUsuariosAsync(1, 10, null, null, 99));
+    }
+
+    [Fact]
     public async Task CambiarEstado_DesactivaUsuarioYRegistraAuditoria()
     {
         var repo = new FakeAdminRepository();
@@ -444,6 +470,28 @@ public class AdministracionTests
         Assert.Equal(12.3, metricas.TiempoPromedioAdopcionDias);
     }
 
+    [Fact]
+    public async Task Dashboard_IncluyeReportesPorEstadoYFiltra()
+    {
+        var repo = new FakeAdminRepository
+        {
+            ReportesPorEstadoRecibido = 2,
+            ReportesPorEstadoEnAtencion = 3,
+            ReportesPorEstadoRescatado = 1
+        };
+        var service = CrearServicio(repo);
+
+        var todos = await service.ObtenerMetricasAsync();
+        var filtrado = await service.ObtenerMetricasAsync((byte)EstadoReporte.EnAtencion);
+
+        Assert.Equal(6, todos.ReportesPorEstado.Sum(r => r.Total));
+        Assert.Single(filtrado.ReportesPorEstado);
+        Assert.Equal("EnAtencion", filtrado.ReportesPorEstado[0].Estado);
+        Assert.Equal(3, filtrado.ReportesPorEstado[0].Total);
+
+        await Assert.ThrowsAsync<AppException>(() => service.ObtenerMetricasAsync(99));
+    }
+
     // ─── Helpers ────────────────────────────────────────────────────
 
     private static AdminService CrearServicio(FakeAdminRepository repo)
@@ -483,6 +531,11 @@ public class AdministracionTests
         public int UsuariosActivos { get; set; }
         public int RefugiosVerificados { get; set; }
         public int ReportesCiudadanos { get; set; }
+        public int ReportesPorEstadoRecibido { get; set; }
+        public int ReportesPorEstadoEnAtencion { get; set; }
+        public int ReportesPorEstadoRescatado { get; set; }
+        public int ReportesPorEstadoNoEncontrado { get; set; }
+        public int ReportesPorEstadoCerrado { get; set; }
         public double PromedioAdopcion { get; set; }
         public bool ForzarConflictoResolucion { get; set; }
 
@@ -527,11 +580,22 @@ public class AdministracionTests
             return denuncia;
         }
 
-        public Task<(IEnumerable<Usuarios> Items, int Total)> ObtenerUsuariosAsync(int pagina, int tamano, string? busqueda)
+        public Task<(IEnumerable<Usuarios> Items, int Total)> ObtenerUsuariosAsync(
+            int pagina,
+            int tamano,
+            string? busqueda,
+            int? rolId = null,
+            byte? estado = null)
         {
             var query = Usuarios.AsQueryable();
             if (!string.IsNullOrWhiteSpace(busqueda))
                 query = query.Where(u => u.Nombre.Contains(busqueda) || u.Correo.Contains(busqueda));
+
+            if (rolId.HasValue)
+                query = query.Where(u => u.RolId == rolId.Value);
+
+            if (estado.HasValue)
+                query = query.Where(u => u.Estado == estado.Value);
 
             var total = query.Count();
             var items = query.OrderBy(u => u.Nombre)
@@ -625,5 +689,24 @@ public class AdministracionTests
         public Task<int> ContarRefugiosVerificadosAsync() => Task.FromResult(RefugiosVerificados);
         public Task<int> ContarReportesCiudadanosAsync() => Task.FromResult(ReportesCiudadanos);
         public Task<double> ObtenerTiempoPromedioAdopcionDiasAsync() => Task.FromResult(PromedioAdopcion);
+
+        public Task<IEnumerable<(byte Estado, int Total)>> ObtenerReportesPorEstadoAsync(byte? estado = null)
+        {
+            var datos = new Dictionary<byte, int>
+            {
+                [(byte)EstadoReporte.Recibido] = ReportesPorEstadoRecibido,
+                [(byte)EstadoReporte.EnAtencion] = ReportesPorEstadoEnAtencion,
+                [(byte)EstadoReporte.Rescatado] = ReportesPorEstadoRescatado,
+                [(byte)EstadoReporte.NoEncontrado] = ReportesPorEstadoNoEncontrado,
+                [(byte)EstadoReporte.Cerrado] = ReportesPorEstadoCerrado
+            };
+
+            var resultado = estado.HasValue
+                ? datos.Where(d => d.Key == estado.Value)
+                : datos.Where(d => d.Value > 0);
+
+            return Task.FromResult<IEnumerable<(byte, int)>>(
+                resultado.Select(d => (d.Key, d.Value)).ToList());
+        }
     }
 }

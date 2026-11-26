@@ -1,4 +1,5 @@
-﻿using Huellitas.Application.Common.Exceptions;
+﻿using Huellitas.Application.Common;
+using Huellitas.Application.Common.Exceptions;
 using Huellitas.Application.DTOs.Auth;
 using Huellitas.Application.DTOs.Usuarios;
 using Huellitas.Application.Interfaces.Services;
@@ -57,8 +58,8 @@ public class AutenticacionService : IAutenticacionService
             throw AppException.BadRequest("Configuración del sistema incompleta: no existe el rol Adoptante.");
 
         // Validamos la política antes de crear el usuario para no dejar registros huérfanos.
-        var politicaId = await _repo.ObtenerPoliticaActivaIdAsync();
-        if (politicaId == 0)
+        var politica = await _repo.ObtenerPoliticaActivaAsync();
+        if (politica is null)
             throw AppException.BadRequest("Configuración del sistema incompleta: no hay política de datos activa.");
 
         await _repo.InsertarAsync(usuario);
@@ -66,8 +67,8 @@ public class AutenticacionService : IAutenticacionService
         await _repo.InsertarConsentimientoAsync(new ConsentimientosDatos
         {
             UsuarioId = usuario.UsuarioId,
-            PoliticaId = politicaId,
-            VersionAceptada = "1.0", //No debe estar quemado debe acualizarse, con lo que trae la BD, pero por ahora lo dejamos así
+            PoliticaId = politica.PoliticaId,
+            VersionAceptada = politica.Version,
             FechaAceptacion = DateTime.Now,
             Activo = true
         });
@@ -200,6 +201,11 @@ public class AutenticacionService : IAutenticacionService
         //Obtener nombre del rol
         var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
 
+        //Verificar si debe aceptar la política vigente (por ejemplo, si cambió de versión).
+        var politicaActiva = await _repo.ObtenerPoliticaActivaAsync();
+        var requiereAceptarPolitica = politicaActiva is not null &&
+            !await _repo.HaAceptadoPoliticaAsync(usuario.UsuarioId, politicaActiva.PoliticaId);
+
         //Generar tokens
         var accessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
         var refreshToken = _tokenService.GenerarRefreshToken();
@@ -222,7 +228,10 @@ public class AutenticacionService : IAutenticacionService
             RefreshToken = refreshToken,
             ExpiraEnSegundos = 15 * 60,
             Nombre = usuario.Nombre,
-            Rol = nombreRol
+            Rol = nombreRol,
+            RequiereAceptarPolitica = requiereAceptarPolitica,
+            VersionPoliticaActual = politicaActiva?.Version,
+            PoliticaIdActual = politicaActiva?.PoliticaId
         };
     }
     public async Task<TokenResponseDTO> RefreshTokenAsync(string refreshToken)
@@ -274,13 +283,20 @@ public class AutenticacionService : IAutenticacionService
         var nombreRol = usuario.Rol?.Nombre ?? "Adoptante";
         var nuevoAccessToken = _tokenService.GenerarAccessToken(usuario, nombreRol);
 
+        var politicaActiva = await _repo.ObtenerPoliticaActivaAsync();
+        var requiereAceptarPolitica = politicaActiva is not null &&
+            !await _repo.HaAceptadoPoliticaAsync(usuario.UsuarioId, politicaActiva.PoliticaId);
+
         return new TokenResponseDTO
         {
             AccessToken = nuevoAccessToken,
             RefreshToken = nuevoRefreshToken,
             ExpiraEnSegundos = 15 * 60,
             Nombre = usuario.Nombre,
-            Rol = nombreRol
+            Rol = nombreRol,
+            RequiereAceptarPolitica = requiereAceptarPolitica,
+            VersionPoliticaActual = politicaActiva?.Version,
+            PoliticaIdActual = politicaActiva?.PoliticaId
         };
     }
     public async Task LogoutAsync(string refreshToken)
@@ -373,6 +389,18 @@ public class AutenticacionService : IAutenticacionService
         if (!dto.AceptaPolitica)
             throw AppException.BadRequest("Debes aceptar la política de tratamiento de datos.");
 
+        var politica = await _usuarioRepo.ObtenerPoliticaActivaAsync()
+            ?? throw AppException.BadRequest("Configuración del sistema incompleta: no hay política de datos activa.");
+
+        var redesSociales = string.IsNullOrWhiteSpace(dto.RedesSociales)
+            ? null
+            : dto.RedesSociales.Trim();
+
+        if (redesSociales is { Length: > 300 })
+            throw AppException.BadRequest("Las redes sociales no pueden superar los 300 caracteres.");
+
+        var soportes = SoportesValidator.Validar(dto.SoportesUrls);
+
         //Crear el Refugio
         var refugio = new Refugios
         {
@@ -383,12 +411,24 @@ public class AutenticacionService : IAutenticacionService
             Correo = dto.Correo,
             Encargado = dto.NombreEncargado,
             Descripcion = dto.Descripcion,
-            RedesSociales = "{}", // Inicializado como JSON vacío
+            RedesSociales = redesSociales,
             EstadoVerificacion = (byte)EstadoVerificacionRefugio.Pendiente,
             Activo = true,
             FechaCreacion = DateTime.Now
         };
         await _refugioRepo.InsertarAsync(refugio);
+
+        if (soportes.Count > 0)
+        {
+            await _refugioRepo.InsertarSoportesAsync(soportes.Select(url => new RefugioSoportes
+            {
+                RefugioId = refugio.RefugioId,
+                Tipo = SoportesValidator.Tipo(url),
+                Archivo = url,
+                FechaCarga = DateTime.Now,
+                Activo = true
+            }));
+        }
 
         //Crear el Usuario
         var usuario = new Usuarios
@@ -407,19 +447,15 @@ public class AutenticacionService : IAutenticacionService
         };
         await _usuarioRepo.InsertarAsync(usuario);
 
-        //Guardar consentimiento de la política (Opcional pero recomendado)
-        var politicaId = await _usuarioRepo.ObtenerPoliticaActivaIdAsync();
-        if (politicaId > 0)
+        //Guardar consentimiento de la política vigente.
+        await _usuarioRepo.InsertarConsentimientoAsync(new ConsentimientosDatos
         {
-            await _usuarioRepo.InsertarConsentimientoAsync(new ConsentimientosDatos
-            {
-                UsuarioId = usuario.UsuarioId,
-                PoliticaId = politicaId,
-                VersionAceptada = "1.0",
-                FechaAceptacion = DateTime.Now,
-                Activo = true
-            });
-        }
+            UsuarioId = usuario.UsuarioId,
+            PoliticaId = politica.PoliticaId,
+            VersionAceptada = politica.Version,
+            FechaAceptacion = DateTime.Now,
+            Activo = true
+        });
 
         //Generar Token y Enviar Correo de Verificación (Reutilizamos la lógica)
         var tokenValor = _tokenService.GenerarTokenVerificacion(usuario.UsuarioId);

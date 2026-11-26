@@ -33,12 +33,25 @@ public class AdminService : IAdminService
     public async Task<PagedResult<UsuarioAdminDTO>> ObtenerUsuariosAsync(
         int pagina,
         int tamano,
-        string? busqueda)
+        string? busqueda,
+        int? rolId = null,
+        byte? estado = null)
     {
         var (paginaValida, tamanoValido) = Paginacion.Validar(pagina, tamano);
         var termino = string.IsNullOrWhiteSpace(busqueda) ? null : busqueda.Trim();
 
-        var (items, total) = await _repo.ObtenerUsuariosAsync(paginaValida, tamanoValido, termino);
+        if (rolId.HasValue && !Enum.IsDefined(typeof(RolUsuario), rolId.Value))
+            throw AppException.BadRequest("El rol indicado no es válido.");
+
+        if (estado.HasValue && !Enum.IsDefined(typeof(EstadoUsuario), estado.Value))
+            throw AppException.BadRequest("El estado de usuario no es válido.");
+
+        var (items, total) = await _repo.ObtenerUsuariosAsync(
+            paginaValida,
+            tamanoValido,
+            termino,
+            rolId,
+            estado);
 
         return new PagedResult<UsuarioAdminDTO>
         {
@@ -356,8 +369,11 @@ public class AdminService : IAdminService
 
     // ADM-04: Dashboard
 
-    public async Task<DashboardMetricasDTO> ObtenerMetricasAsync()
+    public async Task<DashboardMetricasDTO> ObtenerMetricasAsync(byte? estadoReporte = null)
     {
+        if (estadoReporte.HasValue && !Enum.IsDefined(typeof(EstadoReporte), estadoReporte.Value))
+            throw AppException.BadRequest("El estado de reporte no es válido.");
+
         // Se ejecutan secuencialmente sobre el mismo DbContext.
         var adopciones = await _repo.ContarAdopcionesExitosasAsync();
         var mascotas = await _repo.ContarMascotasDisponiblesAsync();
@@ -365,6 +381,7 @@ public class AdminService : IAdminService
         var refugios = await _repo.ContarRefugiosVerificadosAsync();
         var reportes = await _repo.ContarReportesCiudadanosAsync();
         var promedio = await _repo.ObtenerTiempoPromedioAdopcionDiasAsync();
+        var reportesPorEstado = await _repo.ObtenerReportesPorEstadoAsync(estadoReporte);
 
         return new DashboardMetricasDTO
         {
@@ -373,7 +390,14 @@ public class AdminService : IAdminService
             TotalUsuariosRegistrados = usuarios,
             TotalRefugiosVerificados = refugios,
             TotalReportesCiudadanos = reportes,
-            TiempoPromedioAdopcionDias = Math.Round(promedio, 1)
+            TiempoPromedioAdopcionDias = Math.Round(promedio, 1),
+            ReportesPorEstado = reportesPorEstado
+                .Select(x => new ReportePorEstadoDTO
+                {
+                    Estado = NombreEstadoReporte(x.Estado),
+                    Total = x.Total
+                })
+                .ToList()
         };
     }
 
@@ -459,6 +483,13 @@ public class AdminService : IAdminService
     {
         return Enum.IsDefined(typeof(EstadoDenuncia), valor)
             ? ((EstadoDenuncia)valor).ToString()
+            : valor.ToString();
+    }
+
+    private static string NombreEstadoReporte(byte valor)
+    {
+        return Enum.IsDefined(typeof(EstadoReporte), valor)
+            ? ((EstadoReporte)valor).ToString()
             : valor.ToString();
     }
 }

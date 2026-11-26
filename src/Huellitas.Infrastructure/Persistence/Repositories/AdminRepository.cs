@@ -17,7 +17,9 @@ public class AdminRepository : IAdminRepository
     public async Task<(IEnumerable<Usuarios> Items, int Total)> ObtenerUsuariosAsync(
         int pagina,
         int tamano,
-        string? busqueda)
+        string? busqueda,
+        int? rolId = null,
+        byte? estado = null)
     {
         var query = _context.Usuarios
             .AsNoTracking()
@@ -29,6 +31,12 @@ public class AdminRepository : IAdminRepository
             var termino = busqueda.Trim();
             query = query.Where(u => u.Nombre.Contains(termino) || u.Correo.Contains(termino));
         }
+
+        if (rolId.HasValue)
+            query = query.Where(u => u.RolId == rolId.Value);
+
+        if (estado.HasValue)
+            query = query.Where(u => u.Estado == estado.Value);
 
         var total = await query.CountAsync();
 
@@ -254,5 +262,23 @@ public class AdminRepository : IAdminRepository
             .AverageAsync(a => (double?)EF.Functions.DateDiffDay(a.Solicitud.FechaEnvio, a.FechaFinalizacion));
 
         return promedio ?? 0d;
+    }
+
+    public async Task<IEnumerable<(byte Estado, int Total)>> ObtenerReportesPorEstadoAsync(byte? estado = null)
+    {
+        var query = _context.ReportesCiudadanos
+            .AsNoTracking()
+            .Where(r => r.Activo);
+
+        if (estado.HasValue)
+            query = query.Where(r => r.Estado == estado.Value);
+
+        var datos = await query
+            .GroupBy(r => r.Estado)
+            .Select(g => new { Estado = g.Key, Total = g.Count() })
+            .OrderBy(x => x.Estado)
+            .ToListAsync();
+
+        return datos.Select(x => (x.Estado, x.Total));
     }
 }

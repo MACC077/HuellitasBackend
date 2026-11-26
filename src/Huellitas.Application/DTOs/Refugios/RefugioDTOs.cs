@@ -9,6 +9,11 @@ public class VerificarRefugioDTO
     public string? MotivoRechazo { get; set; }
 }
 
+public class SuspenderRefugioDTO
+{
+    public string Motivo { get; set; } = string.Empty;
+}
+
 // Para HU-REF-02 (Refugio)
 public class PerfilRefugioDTO
 {
@@ -74,4 +79,33 @@ public class CrearRefugioDTO
     public string? Encargado { get; set; }
     public string? Descripcion { get; set; }
     public Dictionary<string, string>? RedesSociales { get; set; }
+
+    /// <summary>URLs de soportes en PDF o imagen (jpg, jpeg, png, webp).</summary>
+    public List<string> SoportesUrls { get; set; } = new();
+}
+
+public class RefugioSoporteDTO
+{
+    public int SoporteId { get; set; }
+    public string Tipo { get; set; } = string.Empty;
+    public string Archivo { get; set; } = string.Empty;
+    public DateTime FechaCarga { get; set; }
+}
+
+public class RefugioAdminDTO
+{
+    public int RefugioId { get; set; }
+    public string Nombre { get; set; } = string.Empty;
+    public string Nit { get; set; } = string.Empty;
+    public string Direccion { get; set; } = string.Empty;
+    public string? Telefono { get; set; }
+    public string? Correo { get; set; }
+    public string? Encargado { get; set; }
+    public string? Descripcion { get; set; }
+    public Dictionary<string, string>? RedesSociales { get; set; }
+    public string EstadoVerificacion { get; set; } = string.Empty;
+    public DateTime FechaCreacion { get; set; }
+    public DateTime? FechaVerificacion { get; set; }
+    public string? MotivoRechazo { get; set; }
+    public List<RefugioSoporteDTO> Soportes { get; set; } = new();
 }

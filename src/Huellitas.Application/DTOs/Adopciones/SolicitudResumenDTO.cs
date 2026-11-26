@@ -4,6 +4,8 @@ public class SolicitudResumenDTO
 {
     public int SolicitudId { get; set; }
     public int? AdopcionId { get; set; }
+    public int? RefugioId { get; set; }
+    public int? MascotaId { get; set; }
     public string Codigo { get; set; } = string.Empty;
     public string MascotaNombre { get; set; } = string.Empty;
     public string? MascotaFoto { get; set; }

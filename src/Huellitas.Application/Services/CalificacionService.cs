@@ -1,7 +1,9 @@
 ﻿using Huellitas.Application.Common;
 using Huellitas.Application.Common.Exceptions;
+using Huellitas.Application.DTOs.Administracion;
 using Huellitas.Application.DTOs.Refugios;
 using Huellitas.Application.Interfaces.Services;
+using Huellitas.Infrastructure.Enums;
 using Huellitas.Infrastructure.Interfaces.Repositories;
 using Huellitas.Infrastructure.Persistence.Entities;
 
@@ -109,5 +111,58 @@ public class CalificacionService : ICalificacionService
         // Borrado lógico (Soft Delete)
         calificacion.Activo = false;
         await _calificacionRepo.ActualizarAsync(calificacion);
+    }
+
+    public async Task<PagedResult<CalificacionAdminDTO>> ObtenerParaModeracionAsync(
+        int pagina,
+        int tamano,
+        byte? estado)
+    {
+        var (paginaValida, tamanoValido) = Paginacion.Validar(pagina, tamano);
+
+        if (estado.HasValue && !Enum.IsDefined(typeof(EstadoModeracionCalificacion), estado.Value))
+            throw AppException.BadRequest("El estado de moderación no es válido.");
+
+        var (items, total) = await _calificacionRepo.ObtenerTodasAsync(paginaValida, tamanoValido, estado);
+
+        return new PagedResult<CalificacionAdminDTO>
+        {
+            Items = items.Select(c => new CalificacionAdminDTO
+            {
+                CalificacionId = c.CalificacionId,
+                RefugioId = c.RefugioId,
+                RefugioNombre = c.Refugio?.Nombre ?? string.Empty,
+                AdoptanteNombre = c.Usuario?.Nombre ?? "Adoptante Anónimo",
+                Puntaje = c.Puntaje,
+                Comentario = c.Comentario,
+                EstadoModeracion = NombreEstadoModeracion(c.EstadoModeracion),
+                Fecha = c.Fecha,
+                Activo = c.Activo
+            }).ToList(),
+            Pagina = paginaValida,
+            TamanoPagina = tamanoValido,
+            TotalRegistros = total
+        };
+    }
+
+    public async Task ModerarAsync(int calificacionId, ModerarCalificacionDTO dto)
+    {
+        if (!Enum.IsDefined(typeof(EstadoModeracionCalificacion), dto.EstadoModeracion))
+            throw AppException.BadRequest("El estado de moderación no es válido.");
+
+        var calificacion = await _calificacionRepo.ObtenerPorIdAsync(calificacionId)
+            ?? throw AppException.NotFound("Calificación no encontrada.");
+
+        calificacion.EstadoModeracion = dto.EstadoModeracion;
+        calificacion.FechaModificacion = DateTime.Now;
+
+        await _calificacionRepo.ActualizarAsync(calificacion);
+    }
+
+    private static string NombreEstadoModeracion(byte valor)
+    {
+        return Enum.IsDefined(typeof(EstadoModeracionCalificacion), valor)
+            ? ((EstadoModeracionCalificacion)valor).ToString()
+            : valor.ToString();
     }
 }

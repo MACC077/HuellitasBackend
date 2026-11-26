@@ -1,4 +1,5 @@
 ﻿using Huellitas.Application.Common;
+using Huellitas.Application.DTOs.Administracion;
 using Huellitas.Application.DTOs.Refugios;
 
 namespace Huellitas.Application.Interfaces.Services;
@@ -9,4 +10,8 @@ public interface ICalificacionService
     Task<PagedResult<CalificacionDTO>> ObtenerCalificacionesRefugioAsync(int refugioId, int usuarioId, int pagina, int tamano);
     Task EditarCalificacionAsync(int usuarioId, int refugioId, int calificacionId, ActualizarCalificacionDTO dto);
     Task EliminarCalificacionAsync(int usuarioId, int refugioId, int calificacionId);
+
+    // Moderación administrativa
+    Task<PagedResult<CalificacionAdminDTO>> ObtenerParaModeracionAsync(int pagina, int tamano, byte? estado);
+    Task ModerarAsync(int calificacionId, ModerarCalificacionDTO dto);
 }

@@ -15,4 +15,7 @@ public class RegistroRefugioPublicoDTO
     public string Direccion { get; set; } = string.Empty;
     public string? Descripcion { get; set; }
     public string? RedesSociales { get; set; } // Texto plano o JSON, se maneja en el servicio
+
+    /// <summary>URLs de soportes en PDF o imagen (jpg, jpeg, png, webp).</summary>
+    public List<string> SoportesUrls { get; set; } = new();
 }

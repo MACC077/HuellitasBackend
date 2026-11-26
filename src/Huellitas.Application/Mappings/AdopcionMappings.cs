@@ -40,6 +40,8 @@ public static class AdopcionMappings
         {
             SolicitudId = s.SolicitudId,
             AdopcionId = s.Adopciones?.FirstOrDefault()?.AdopcionId,
+            RefugioId = s.Mascota?.RefugioId,
+            MascotaId = s.MascotaId,
             Codigo = s.Codigo,
             MascotaNombre = s.Mascota?.Nombre ?? "",
             MascotaFoto = s.Mascota?.Multimedia?.FirstOrDefault(m => m.EsPrincipal)?.Archivo,

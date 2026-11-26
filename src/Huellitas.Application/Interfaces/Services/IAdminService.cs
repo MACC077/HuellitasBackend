@@ -6,7 +6,12 @@ namespace Huellitas.Application.Interfaces.Services;
 public interface IAdminService
 {
     // ADM-01
-    Task<PagedResult<UsuarioAdminDTO>> ObtenerUsuariosAsync(int pagina, int tamano, string? busqueda);
+    Task<PagedResult<UsuarioAdminDTO>> ObtenerUsuariosAsync(
+        int pagina,
+        int tamano,
+        string? busqueda,
+        int? rolId = null,
+        byte? estado = null);
 
     /// <summary>
     /// Devuelve true si el estado cambió; false si el usuario ya tenía ese estado.
@@ -28,5 +33,5 @@ public interface IAdminService
     Task ActualizarConfiguracionAsync(int configuracionId, CrearConfiguracionDTO dto, int adminId);
 
     // ADM-04
-    Task<DashboardMetricasDTO> ObtenerMetricasAsync();
+    Task<DashboardMetricasDTO> ObtenerMetricasAsync(byte? estadoReporte = null);
 }

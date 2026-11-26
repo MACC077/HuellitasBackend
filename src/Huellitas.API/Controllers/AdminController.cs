@@ -17,8 +17,13 @@ namespace Huellitas.API.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
+    private readonly ICalificacionService _calificacionService;
 
-    public AdminController(IAdminService adminService) => _adminService = adminService;
+    public AdminController(IAdminService adminService, ICalificacionService calificacionService)
+    {
+        _adminService = adminService;
+        _calificacionService = calificacionService;
+    }
 
     // ─── ADM-01: Usuarios y refugios ────────────────────────────────
 
@@ -33,9 +38,11 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> GetUsuarios(
         [FromQuery] int pagina = 1,
         [FromQuery] int tamano = 10,
-        [FromQuery] string? busqueda = null)
+        [FromQuery] string? busqueda = null,
+        [FromQuery] int? rolId = null,
+        [FromQuery] byte? estado = null)
     {
-        var result = await _adminService.ObtenerUsuariosAsync(pagina, tamano, busqueda);
+        var result = await _adminService.ObtenerUsuariosAsync(pagina, tamano, busqueda, rolId, estado);
         return Ok(result);
     }
 
@@ -210,9 +217,41 @@ public class AdminController : ControllerBase
     /// <response code="200">Métricas calculadas.</response>
     [HttpGet("dashboard", Name = "GetDashboardAdmin")]
     [ProducesResponseType(typeof(DashboardMetricasDTO), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetDashboard()
+    public async Task<IActionResult> GetDashboard([FromQuery] byte? estadoReporte = null)
     {
-        var result = await _adminService.ObtenerMetricasAsync();
+        var result = await _adminService.ObtenerMetricasAsync(estadoReporte);
         return Ok(result);
+    }
+
+    // ─── ADM-02: Moderación de calificaciones ───────────────────────
+
+    /// <summary>
+    /// Consultar calificaciones para moderación, con filtro opcional por estado.
+    /// </summary>
+    /// <param name="estado">0 = Publicada, 1 = Oculta.</param>
+    [HttpGet("calificaciones", Name = "GetCalificacionesAdmin")]
+    [ProducesResponseType(typeof(PagedResult<CalificacionAdminDTO>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> GetCalificaciones(
+        [FromQuery] int pagina = 1,
+        [FromQuery] int tamano = 10,
+        [FromQuery] byte? estado = null)
+    {
+        var result = await _calificacionService.ObtenerParaModeracionAsync(pagina, tamano, estado);
+        return Ok(result);
+    }
+
+    /// <summary>
+    /// Publicar u ocultar una calificación. Ocultarla la retira de la consulta pública.
+    /// </summary>
+    /// <param name="estado">0 = Publicada, 1 = Oculta.</param>
+    [HttpPatch("calificaciones/{id:int}/moderar", Name = "ModerarCalificacionAdmin")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> ModerarCalificacion(int id, [FromBody] ModerarCalificacionDTO dto)
+    {
+        await _calificacionService.ModerarAsync(id, dto);
+        return Ok(new { mensaje = "Estado de moderación actualizado." });
     }
 }

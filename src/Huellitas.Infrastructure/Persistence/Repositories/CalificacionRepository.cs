@@ -37,6 +37,33 @@ public class CalificacionRepository : ICalificacionRepository
         return (items, total);
     }
 
+    public async Task<(IEnumerable<Calificaciones> Items, int Total)> ObtenerTodasAsync(
+        int pagina,
+        int tamano,
+        byte? estadoModeracion)
+    {
+        var query = _context.Calificaciones
+            .AsNoTracking()
+            .Include(c => c.Usuario)
+            .Include(c => c.Refugio)
+            .Where(c => c.Activo)
+            .AsQueryable();
+
+        if (estadoModeracion.HasValue)
+            query = query.Where(c => c.EstadoModeracion == estadoModeracion.Value);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(c => c.Fecha)
+            .ThenByDescending(c => c.CalificacionId)
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
     public async Task<Calificaciones?> ObtenerPorIdAsync(int calificacionId)
     {
         return await _context.Calificaciones

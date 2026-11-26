@@ -59,6 +59,8 @@ public partial class HuellitasDbContext : DbContext
 
     public virtual DbSet<Refugios> Refugios { get; set; }
 
+    public virtual DbSet<RefugioSoportes> RefugioSoportes { get; set; }
+
     public virtual DbSet<RegistrosAuditorias> RegistrosAuditoria { get; set; }
 
     public virtual DbSet<RegistrosClinico> RegistrosClinicos { get; set; }
@@ -449,6 +451,22 @@ public partial class HuellitasDbContext : DbContext
             entity.HasOne(d => d.VerificadoPor).WithMany(p => p.Refugios)
                 .HasForeignKey(d => d.VerificadoPorId)
                 .HasConstraintName("FK_Refugios_VerificadoPor");
+        });
+
+        modelBuilder.Entity<RefugioSoportes>(entity =>
+        {
+            entity.HasKey(e => e.SoporteId);
+
+            entity.ToTable("RefugioSoportes");
+
+            entity.Property(e => e.Archivo).HasMaxLength(800);
+            entity.Property(e => e.FechaCarga).HasPrecision(0);
+            entity.Property(e => e.Tipo).HasMaxLength(40);
+
+            entity.HasOne(d => d.Refugio).WithMany(p => p.Soportes)
+                .HasForeignKey(d => d.RefugioId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_RefugioSoportes_Refugios");
         });
 
         modelBuilder.Entity<RegistrosAuditorias>(entity =>

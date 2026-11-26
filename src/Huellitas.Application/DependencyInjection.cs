@@ -30,6 +30,8 @@ public static class DependencyInjection
         services.AddScoped<ISeguimientoService, SeguimientoService>();
         services.AddScoped<IReporteService, ReporteService>();
         services.AddScoped<IAdminService, AdminService>();
+        services.AddScoped<IDenunciaService, DenunciaService>();
+        services.AddScoped<IPoliticaService, PoliticaService>();
         return services;
     }
 }

@@ -75,6 +75,38 @@ public static class RefugioMappings
         };
     }
 
+    public static RefugioAdminDTO ToAdminDto(this Refugios r)
+    {
+        return new RefugioAdminDTO
+        {
+            RefugioId = r.RefugioId,
+            Nombre = r.Nombre,
+            Nit = r.Nit,
+            Direccion = r.Direccion,
+            Telefono = r.Telefono,
+            Correo = r.Correo,
+            Encargado = r.Encargado,
+            Descripcion = r.Descripcion,
+            RedesSociales = DeserializarRedesSociales(r.RedesSociales),
+            EstadoVerificacion = Enum.IsDefined(typeof(EstadoVerificacionRefugio), r.EstadoVerificacion)
+                ? ((EstadoVerificacionRefugio)r.EstadoVerificacion).ToString()
+                : r.EstadoVerificacion.ToString(),
+            FechaCreacion = r.FechaCreacion,
+            FechaVerificacion = r.FechaVerificacion,
+            MotivoRechazo = r.MotivoRechazo,
+            Soportes = r.Soportes?
+                .Where(s => s.Activo)
+                .OrderBy(s => s.SoporteId)
+                .Select(s => new RefugioSoporteDTO
+                {
+                    SoporteId = s.SoporteId,
+                    Tipo = s.Tipo,
+                    Archivo = s.Archivo,
+                    FechaCarga = s.FechaCarga
+                }).ToList() ?? new()
+        };
+    }
+
     public static ApadrinamientoDTO ToDto(this Apadrinamientos a)
     {
         return new ApadrinamientoDTO

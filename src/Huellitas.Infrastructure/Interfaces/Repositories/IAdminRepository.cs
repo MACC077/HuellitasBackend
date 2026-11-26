@@ -8,7 +8,9 @@ public interface IAdminRepository
     Task<(IEnumerable<Usuarios> Items, int Total)> ObtenerUsuariosAsync(
         int pagina,
         int tamano,
-        string? busqueda);
+        string? busqueda,
+        int? rolId = null,
+        byte? estado = null);
 
     Task<Usuarios?> ObtenerUsuarioConRolAsync(int usuarioId);
     Task<Roles?> ObtenerRolAsync(int rolId);
@@ -50,4 +52,10 @@ public interface IAdminRepository
     Task<int> ContarRefugiosVerificadosAsync();
     Task<int> ContarReportesCiudadanosAsync();
     Task<double> ObtenerTiempoPromedioAdopcionDiasAsync();
+
+    /// <summary>
+    /// Totales de reportes ciudadanos agrupados por estado. Si se indica un estado,
+    /// solo devuelve ese grupo.
+    /// </summary>
+    Task<IEnumerable<(byte Estado, int Total)>> ObtenerReportesPorEstadoAsync(byte? estado = null);
 }

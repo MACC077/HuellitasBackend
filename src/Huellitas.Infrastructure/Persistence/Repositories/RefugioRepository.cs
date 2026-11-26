@@ -26,6 +26,7 @@ public class RefugioRepository : IRefugioRepository
     {
         return await _context.Refugios
             .Include(r => r.RequisitosAdopcions.Where(req => req.Activo))
+            .Include(r => r.Soportes.Where(s => s.Activo))
             .FirstOrDefaultAsync(r => r.RefugioId == refugioId);
     }
 
@@ -93,5 +94,42 @@ public class RefugioRepository : IRefugioRepository
     public async Task<bool> ExisteNitAsync(string nit)
     {
         return await _context.Refugios.AnyAsync(r => r.Nit == nit);
+    }
+
+    public async Task<(IEnumerable<Refugios> Items, int Total)> ObtenerRefugiosPorEstadoAsync(
+        byte estado,
+        int pagina,
+        int tamano)
+    {
+        var query = _context.Refugios
+            .AsNoTracking()
+            .Include(r => r.Soportes.Where(s => s.Activo))
+            .Where(r => r.Activo && r.EstadoVerificacion == estado)
+            .OrderBy(r => r.FechaCreacion)
+            .ThenBy(r => r.RefugioId);
+
+        var total = await query.CountAsync();
+
+        var items = await query
+            .Skip((pagina - 1) * tamano)
+            .Take(tamano)
+            .ToListAsync();
+
+        return (items, total);
+    }
+
+    public async Task InsertarSoportesAsync(IEnumerable<RefugioSoportes> soportes)
+    {
+        _context.RefugioSoportes.AddRange(soportes);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<IEnumerable<RefugioSoportes>> ObtenerSoportesAsync(int refugioId)
+    {
+        return await _context.RefugioSoportes
+            .AsNoTracking()
+            .Where(s => s.RefugioId == refugioId && s.Activo)
+            .OrderBy(s => s.SoporteId)
+            .ToListAsync();
     }
 }
